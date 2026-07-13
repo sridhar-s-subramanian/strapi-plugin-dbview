@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTheme } from 'styled-components';
 import { Box, Flex, Typography, Pagination, PreviousLink, NextLink, PageLink, Loader, Badge, IconButton, Button, Tooltip } from '@strapi/design-system';
 import { ArrowUp, ArrowDown, Filter, Link } from '@strapi/icons';
 import { useDbViewApi } from '../../hooks/useDbViewApi';
@@ -38,6 +39,7 @@ const PAGE_SIZES = [25, 50, 100];
 
 export const DataGrid = ({ tableName }: Props) => {
   const api = useDbViewApi();
+  const { colors } = useTheme();
 
   const [columns, setColumns] = useState<ColumnInfo[]>([]);
   const [rows, setRows] = useState<Record<string, unknown>[]>([]);
@@ -155,7 +157,7 @@ export const DataGrid = ({ tableName }: Props) => {
   };
 
   return (
-    <Box>
+    <Box style={{ width: '100%', minWidth: 0 }}>
       {/* Header */}
       <Flex justifyContent="space-between" alignItems="center" marginBottom={4}>
         <Flex direction="column" gap={1}>
@@ -186,8 +188,13 @@ export const DataGrid = ({ tableName }: Props) => {
           <Loader />
         </Flex>
       ) : (
-        <Box style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+        <Box
+          background="neutral0"
+          borderRadius="4px"
+          shadow="filterShadow"
+          style={{ width: '100%', maxWidth: '100%', minWidth: 0, overflowX: 'auto' }}
+        >
+          <table style={{ borderCollapse: 'collapse', fontSize: 13, minWidth: '100%' }}>
             <thead>
               <tr>
                 {displayColumns.map((col) => {
@@ -199,8 +206,8 @@ export const DataGrid = ({ tableName }: Props) => {
                       style={{
                         textAlign: 'left',
                         padding: '8px',
-                        background: '#f6f6f9',
-                        borderBottom: '2px solid #dcdce4',
+                        background: colors.neutral100,
+                        borderBottom: `2px solid ${colors.neutral200}`,
                         whiteSpace: 'nowrap',
                         position: 'relative',
                       }}
@@ -221,13 +228,13 @@ export const DataGrid = ({ tableName }: Props) => {
                               size="S"
                               label="Filter"
                               onClick={() => setOpenFilter(openFilter === col ? null : col)}
-                              style={{ color: isFiltered ? '#4945ff' : undefined }}
+                              style={{ color: isFiltered ? colors.primary600 : undefined }}
                             ><Filter /></IconButton>
                           </Tooltip>
                         )}
                         {info?.foreignKeyTable && (
                           <Tooltip description={`→ ${info.foreignKeyTable}`}>
-                            <span style={{ fontSize: 11, color: '#4945ff', cursor: 'default' }}>FK</span>
+                            <span style={{ fontSize: 11, color: colors.primary600, cursor: 'default' }}>FK</span>
                           </Tooltip>
                         )}
                       </Flex>
@@ -244,13 +251,13 @@ export const DataGrid = ({ tableName }: Props) => {
                     </th>
                   );
                 })}
-                <th style={{ background: '#f6f6f9', borderBottom: '2px solid #dcdce4', padding: '8px', width: 32 }} />
+                <th style={{ background: colors.neutral100, borderBottom: `2px solid ${colors.neutral200}`, padding: '8px', width: 32 }} />
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={displayColumns.length + 1} style={{ textAlign: 'center', padding: '32px', color: '#8e8ea9' }}>
+                  <td colSpan={displayColumns.length + 1} style={{ textAlign: 'center', padding: '32px', color: colors.neutral500 }}>
                     No rows found.
                   </td>
                 </tr>
@@ -260,7 +267,7 @@ export const DataGrid = ({ tableName }: Props) => {
                     key={i}
                     style={{ cursor: 'pointer' }}
                     onClick={() => setDetailRow(row)}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = '#f6f6f9')}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = colors.neutral100)}
                     onMouseLeave={(e) => (e.currentTarget.style.background = '')}
                   >
                     {displayColumns.map((col) => {
@@ -274,14 +281,14 @@ export const DataGrid = ({ tableName }: Props) => {
                           key={col}
                           style={{
                             padding: '6px 8px',
-                            borderBottom: '1px solid #eaeaef',
+                            borderBottom: `1px solid ${colors.neutral150}`,
                             maxWidth: 300,
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
                             fontFamily: 'monospace',
                             fontSize: 12,
-                            color: isNull || isRedacted ? '#8e8ea9' : undefined,
+                            color: isNull || isRedacted ? colors.neutral500 : undefined,
                             fontStyle: isNull ? 'italic' : undefined,
                           }}
                         >
@@ -304,7 +311,7 @@ export const DataGrid = ({ tableName }: Props) => {
                         </td>
                       );
                     })}
-                    <td style={{ padding: '6px 4px', borderBottom: '1px solid #eaeaef' }} />
+                    <td style={{ padding: '6px 4px', borderBottom: `1px solid ${colors.neutral150}` }} />
                   </tr>
                 ))
               )}

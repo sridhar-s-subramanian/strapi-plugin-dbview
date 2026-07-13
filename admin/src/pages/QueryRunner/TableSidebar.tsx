@@ -52,7 +52,7 @@ export const QueryRunnerSidebar = ({ onInsertTable, onShowStructure }: Props) =>
         Search
       </Searchbar>
 
-      <Box marginTop={2} style={{ maxHeight: '65vh', overflowY: 'auto' }}>
+      <Box marginTop={2} style={{ maxHeight: '65vh', overflowY: 'auto', overflowX: 'hidden' }}>
         {isLoading ? (
           <Flex justifyContent="center" paddingTop={4}><Loader small /></Flex>
         ) : filtered.length === 0 ? (
@@ -65,17 +65,8 @@ export const QueryRunnerSidebar = ({ onInsertTable, onShowStructure }: Props) =>
               marginTop={1}
               style={{ cursor: 'pointer' }}
             >
-              <Flex alignItems="center" justifyContent="space-between" gap={1}>
-                <Typography
-                  variant="omega"
-                  textColor="primary600"
-                  style={{ fontFamily: 'monospace', fontSize: 12, cursor: 'pointer', flexGrow: 1 }}
-                  onClick={() => onInsertTable(table.name)}
-                  title="Click to insert table name"
-                >
-                  {table.name}
-                </Typography>
-                <Flex gap={0}>
+              <Flex alignItems="center" gap={1}>
+                <Flex gap={0} style={{ flexShrink: 0 }}>
                   <Tooltip description="Show structure">
                     <IconButton
                       label="Structure"
@@ -91,6 +82,24 @@ export const QueryRunnerSidebar = ({ onInsertTable, onShowStructure }: Props) =>
                     ><ExternalLink /></IconButton>
                   </Tooltip>
                 </Flex>
+                <Typography
+                  variant="omega"
+                  textColor="primary600"
+                  style={{
+                    fontFamily: 'monospace',
+                    fontSize: 12,
+                    cursor: 'pointer',
+                    flex: 1,
+                    minWidth: 0,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                  onClick={() => onInsertTable(table.name)}
+                  title={`${table.name} — click to insert`}
+                >
+                  {table.name}
+                </Typography>
               </Flex>
             </Box>
           ))

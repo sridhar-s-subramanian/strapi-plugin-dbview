@@ -46,7 +46,7 @@ export const TableSidebar = ({ selectedTable, onSelect }: Props) => {
         Search
       </Searchbar>
 
-      <Box marginTop={2} style={{ maxHeight: '75vh', overflowY: 'auto' }}>
+      <Box marginTop={2} style={{ maxHeight: '75vh', overflowY: 'auto', overflowX: 'hidden' }}>
         {isLoading ? (
           <Flex justifyContent="center" paddingTop={4}>
             <Loader small />
@@ -77,7 +77,15 @@ export const TableSidebar = ({ selectedTable, onSelect }: Props) => {
                   variant="omega"
                   fontWeight={isSelected ? 'bold' : undefined}
                   textColor={isSelected ? 'primary600' : 'neutral700'}
-                  style={{ fontFamily: 'monospace', fontSize: 13 }}
+                  style={{
+                    fontFamily: 'monospace',
+                    fontSize: 13,
+                    display: 'block',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                  title={table.name}
                 >
                   {table.name}
                 </Typography>

@@ -155,9 +155,10 @@ export const QueryRunner = () => {
           />
 
           {/* Main editor + results */}
-          <Box flex={1} minWidth={0}>
+          <Box style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
             <SqlEditor
-              initialSql={sql}
+              sql={sql}
+              onChange={handleSqlChange}
               onRun={handleRun}
               onExplain={handleExplain}
               onExplainAnalyze={handleExplainAnalyze}
@@ -171,7 +172,9 @@ export const QueryRunner = () => {
                 padding={4}
                 borderRadius="4px"
                 marginTop={4}
-                style={{ border: '1px solid #d02b20' }}
+                borderColor="danger600"
+                borderStyle="solid"
+                borderWidth="1px"
               >
                 <Typography variant="omega" textColor="danger600" style={{ fontFamily: 'monospace' }}>
                   {result.message}

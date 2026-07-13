@@ -1,4 +1,5 @@
 import { Box, Typography } from '@strapi/design-system';
+import { useDbViewTheme } from '../../hooks/useDbViewTheme';
 
 interface Props {
   type: 'explain' | 'explain-analyze';
@@ -10,6 +11,7 @@ interface Props {
 export const ExplainPlan = ({ type, columns, rows, durationMs }: Props) => {
   const isSingleCol = columns.length === 1;
   const singleKey = columns[0];
+  const { colors } = useDbViewTheme();
 
   return (
     <Box marginTop={4}>
@@ -21,7 +23,7 @@ export const ExplainPlan = ({ type, columns, rows, durationMs }: Props) => {
         background="neutral100"
         borderRadius="4px"
         padding={4}
-        style={{ border: '1px solid #dcdce4', overflowX: 'auto' }}
+        style={{ border: `1px solid ${colors.neutral200}`, maxWidth: '100%', overflowX: 'auto' }}
       >
         {isSingleCol ? (
           // PostgreSQL / MySQL text plan — single column, preformatted
@@ -34,7 +36,7 @@ export const ExplainPlan = ({ type, columns, rows, durationMs }: Props) => {
             <thead>
               <tr>
                 {columns.map((col) => (
-                  <th key={col} style={{ textAlign: 'left', padding: '4px 8px', borderBottom: '2px solid #dcdce4', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
+                  <th key={col} style={{ textAlign: 'left', padding: '4px 8px', borderBottom: `2px solid ${colors.neutral200}`, fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
                     {col}
                   </th>
                 ))}
@@ -47,7 +49,7 @@ export const ExplainPlan = ({ type, columns, rows, durationMs }: Props) => {
                     const v = row[col];
                     const isNull = v === null || v === undefined;
                     return (
-                      <td key={col} style={{ padding: '4px 8px', borderBottom: '1px solid #eaeaef', fontFamily: 'monospace', color: isNull ? '#8e8ea9' : undefined }}>
+                      <td key={col} style={{ padding: '4px 8px', borderBottom: `1px solid ${colors.neutral150}`, fontFamily: 'monospace', color: isNull ? colors.neutral500 : undefined }}>
                         {isNull ? 'NULL' : String(v)}
                       </td>
                     );

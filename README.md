@@ -22,7 +22,7 @@ Inspired by [filament-dbview](https://github.com/sridhar-s-subramanian/filament-
 | Requirement | Version |
 |---|---|
 | Strapi | `^5.0.0` |
-| Node.js | `>=18.0.0` |
+| Node.js | `>=20.0.0 <=26.x.x` |
 | npm | `>=6.0.0` |
 
 > **Strapi v4 is not supported.** This plugin targets Strapi v5 and above only.

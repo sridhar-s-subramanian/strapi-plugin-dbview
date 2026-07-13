@@ -1,10 +1,14 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import MonacoEditor, { type OnMount } from '@monaco-editor/react';
 import { Box, Flex, Button, SingleSelect, SingleSelectOption, Typography } from '@strapi/design-system';
 import { Play, Loader } from '@strapi/icons';
+import { useDbViewTheme } from '../../hooks/useDbViewTheme';
+// Configures the bundled Monaco instance — must be imported before the editor renders.
+import '../../utils/monaco';
 
 interface Props {
-  initialSql?: string;
+  sql: string;
+  onChange: (sql: string) => void;
   onRun: (sql: string, limit: number) => void;
   onExplain: (sql: string) => void;
   onExplainAnalyze: (sql: string) => void;
@@ -13,15 +17,20 @@ interface Props {
 
 const ROW_LIMITS = [25, 50, 100, 500, 1000, 5000];
 
-export const SqlEditor = ({ initialSql = '', onRun, onExplain, onExplainAnalyze, isLoading }: Props) => {
-  const [sql, setSql] = useState(initialSql);
+export const SqlEditor = ({ sql, onChange, onRun, onExplain, onExplainAnalyze, isLoading }: Props) => {
   const [limit, setLimit] = useState(100);
   const sqlRef = useRef(sql);
+  const { colors, isDark } = useDbViewTheme();
+
+  // Keybindings registered on mount close over this ref, so it must track the latest value.
+  useEffect(() => {
+    sqlRef.current = sql;
+  }, [sql]);
 
   const handleChange = (val: string | undefined) => {
     const v = val ?? '';
-    setSql(v);
     sqlRef.current = v;
+    onChange(v);
   };
 
   const handleMount: OnMount = (editor, monaco) => {
@@ -34,7 +43,7 @@ export const SqlEditor = ({ initialSql = '', onRun, onExplain, onExplainAnalyze,
 
   return (
     <Box>
-      <Box borderRadius="4px" style={{ border: '1px solid #dcdce4', overflow: 'hidden' }}>
+      <Box borderRadius="4px" style={{ border: `1px solid ${colors.neutral200}`, overflow: 'hidden' }}>
         <MonacoEditor
           height="240px"
           language="sql"
@@ -51,7 +60,7 @@ export const SqlEditor = ({ initialSql = '', onRun, onExplain, onExplainAnalyze,
             automaticLayout: true,
             tabSize: 2,
           }}
-          theme="vs"
+          theme={isDark ? 'vs-dark' : 'vs'}
         />
       </Box>
 

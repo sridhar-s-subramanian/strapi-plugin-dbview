@@ -1,6 +1,7 @@
 import { Box, Flex, Typography } from '@strapi/design-system';
 import { RowDetailModal } from '../DatabaseBrowser/RowDetailModal';
 import { useState } from 'react';
+import { useDbViewTheme } from '../../hooks/useDbViewTheme';
 
 interface Props {
   columns: string[];
@@ -14,6 +15,7 @@ const REDACTED_MASK = '[REDACTED]';
 
 export const ResultsPanel = ({ columns, rows, rowCount, durationMs, truncated }: Props) => {
   const [detailRow, setDetailRow] = useState<Record<string, unknown> | null>(null);
+  const { colors } = useDbViewTheme();
 
   if (columns.length === 0) return null;
 
@@ -45,13 +47,13 @@ export const ResultsPanel = ({ columns, rows, rowCount, durationMs, truncated }:
           )}
         </Flex>
         <Flex gap={2}>
-          <button type="button" onClick={exportCSV} style={{ fontSize: 12, color: '#4945ff', background: 'none', border: 'none', cursor: 'pointer' }}>CSV</button>
-          <button type="button" onClick={exportJSON} style={{ fontSize: 12, color: '#4945ff', background: 'none', border: 'none', cursor: 'pointer' }}>JSON</button>
+          <button type="button" onClick={exportCSV} style={{ fontSize: 12, color: colors.primary600, background: 'none', border: 'none', cursor: 'pointer' }}>CSV</button>
+          <button type="button" onClick={exportJSON} style={{ fontSize: 12, color: colors.primary600, background: 'none', border: 'none', cursor: 'pointer' }}>JSON</button>
         </Flex>
       </Flex>
 
-      <Box style={{ overflowX: 'auto', border: '1px solid #dcdce4', borderRadius: 4 }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+      <Box style={{ width: '100%', maxWidth: '100%', minWidth: 0, overflowX: 'auto', border: `1px solid ${colors.neutral200}`, borderRadius: 4 }}>
+        <table style={{ borderCollapse: 'collapse', fontSize: 12, minWidth: '100%' }}>
           <thead>
             <tr>
               {columns.map((col) => (
@@ -60,8 +62,8 @@ export const ResultsPanel = ({ columns, rows, rowCount, durationMs, truncated }:
                   style={{
                     textAlign: 'left',
                     padding: '6px 10px',
-                    background: '#f6f6f9',
-                    borderBottom: '2px solid #dcdce4',
+                    background: colors.neutral100,
+                    borderBottom: `2px solid ${colors.neutral200}`,
                     fontFamily: 'monospace',
                     fontWeight: 700,
                     whiteSpace: 'nowrap',
@@ -77,7 +79,7 @@ export const ResultsPanel = ({ columns, rows, rowCount, durationMs, truncated }:
               <tr>
                 <td
                   colSpan={columns.length}
-                  style={{ textAlign: 'center', padding: '24px', color: '#8e8ea9' }}
+                  style={{ textAlign: 'center', padding: '24px', color: colors.neutral500 }}
                 >
                   No results.
                 </td>
@@ -88,7 +90,7 @@ export const ResultsPanel = ({ columns, rows, rowCount, durationMs, truncated }:
                   key={i}
                   style={{ cursor: 'pointer' }}
                   onClick={() => setDetailRow(row)}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = '#f6f6f9')}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = colors.neutral100)}
                   onMouseLeave={(e) => (e.currentTarget.style.background = '')}
                 >
                   {columns.map((col) => {
@@ -101,13 +103,13 @@ export const ResultsPanel = ({ columns, rows, rowCount, durationMs, truncated }:
                         key={col}
                         style={{
                           padding: '5px 10px',
-                          borderBottom: '1px solid #eaeaef',
+                          borderBottom: `1px solid ${colors.neutral150}`,
                           fontFamily: 'monospace',
                           maxWidth: 300,
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap',
-                          color: isNull || isRedacted ? '#8e8ea9' : undefined,
+                          color: isNull || isRedacted ? colors.neutral500 : undefined,
                           fontStyle: isNull ? 'italic' : undefined,
                         }}
                         title={display}

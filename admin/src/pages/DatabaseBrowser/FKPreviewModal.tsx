@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Modal, Typography, Box, Loader, Flex } from '@strapi/design-system';
 import { useDbViewApi } from '../../hooks/useDbViewApi';
+import { useDbViewTheme } from '../../hooks/useDbViewTheme';
 
 interface Props {
   foreignTable: string;
@@ -14,6 +15,7 @@ export const FKPreviewModal = ({ foreignTable, foreignColumn, value, onClose }: 
   const [columns, setColumns] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const api = useDbViewApi();
+  const { colors } = useDbViewTheme();
 
   useEffect(() => {
     api
@@ -48,7 +50,7 @@ export const FKPreviewModal = ({ foreignTable, foreignColumn, value, onClose }: 
                 <thead>
                   <tr>
                     {columns.map((col) => (
-                      <th key={col} style={{ textAlign: 'left', padding: '6px 8px', background: '#f6f6f9', borderBottom: '1px solid #dcdce4', fontFamily: 'monospace' }}>
+                      <th key={col} style={{ textAlign: 'left', padding: '6px 8px', background: colors.neutral100, borderBottom: `1px solid ${colors.neutral200}`, fontFamily: 'monospace' }}>
                         {col}
                       </th>
                     ))}
@@ -62,7 +64,7 @@ export const FKPreviewModal = ({ foreignTable, foreignColumn, value, onClose }: 
                         const isNull = v === null || v === undefined;
                         const isRedacted = v === '[REDACTED]';
                         return (
-                          <td key={col} style={{ padding: '6px 8px', borderBottom: '1px solid #eaeaef', fontFamily: 'monospace', color: isNull || isRedacted ? '#8e8ea9' : undefined }}>
+                          <td key={col} style={{ padding: '6px 8px', borderBottom: `1px solid ${colors.neutral150}`, fontFamily: 'monospace', color: isNull || isRedacted ? colors.neutral500 : undefined }}>
                             {isNull ? 'NULL' : String(v)}
                           </td>
                         );

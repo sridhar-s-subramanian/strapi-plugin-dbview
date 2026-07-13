@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Box, Typography, Flex } from '@strapi/design-system';
 import { useDbViewApi } from '../../hooks/useDbViewApi';
+import { useDbViewTheme } from '../../hooks/useDbViewTheme';
 
 interface HistoryEntry {
   id: number;
@@ -18,6 +19,7 @@ interface Props {
 export const HistoryPanel = ({ onLoad }: Props) => {
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
   const api = useDbViewApi();
+  const { colors } = useDbViewTheme();
 
   const load = useCallback(() => {
     api.listHistory().then(({ data }) => setEntries(data.entries)).catch(() => {});
@@ -50,7 +52,7 @@ export const HistoryPanel = ({ onLoad }: Props) => {
             borderRadius="4px"
             style={{ cursor: 'pointer' }}
             onClick={() => onLoad(entry.sql, entry.connection)}
-            onMouseEnter={(e: React.MouseEvent<HTMLDivElement>) => ((e.currentTarget as HTMLDivElement).style.background = '#f0f0ff')}
+            onMouseEnter={(e: React.MouseEvent<HTMLDivElement>) => ((e.currentTarget as HTMLDivElement).style.background = colors.primary100)}
             onMouseLeave={(e: React.MouseEvent<HTMLDivElement>) => ((e.currentTarget as HTMLDivElement).style.background = '')}
           >
             <Typography

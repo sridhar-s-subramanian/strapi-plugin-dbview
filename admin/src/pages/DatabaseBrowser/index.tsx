@@ -25,17 +25,21 @@ export const DatabaseBrowser = () => {
         title="Database Browser"
         subtitle="Browse all database tables"
         primaryAction={
-          selectedTable ? (
-            <Flex gap={2}>
-              <Button
-                tag="a"
-                href={`/admin/plugins/${PLUGIN_ID}/query?table=${encodeURIComponent(selectedTable)}`}
-                startIcon={<Command />}
-                variant="secondary"
-                size="S"
-              >
-                Query
-              </Button>
+          <Flex gap={2}>
+            <Button
+              tag="a"
+              href={
+                selectedTable
+                  ? `/admin/plugins/${PLUGIN_ID}/query?table=${encodeURIComponent(selectedTable)}`
+                  : `/admin/plugins/${PLUGIN_ID}/query`
+              }
+              startIcon={<Command />}
+              variant="secondary"
+              size="S"
+            >
+              Query
+            </Button>
+            {selectedTable ? (
               <Button
                 tag="a"
                 href={`/admin/plugins/${PLUGIN_ID}/query?structure=${encodeURIComponent(selectedTable)}`}
@@ -45,8 +49,12 @@ export const DatabaseBrowser = () => {
               >
                 Structure
               </Button>
-            </Flex>
-          ) : null
+            ) : (
+              <Button startIcon={<GridFour />} variant="secondary" size="S" disabled>
+                Structure
+              </Button>
+            )}
+          </Flex>
         }
       />
 
@@ -54,7 +62,7 @@ export const DatabaseBrowser = () => {
         <Flex gap={6} alignItems="flex-start">
           <TableSidebar selectedTable={selectedTable} onSelect={handleSelectTable} />
 
-          <Flex flex={1} minWidth={0} direction="column">
+          <Flex direction="column" style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
             {selectedTable ? (
               <DataGrid tableName={selectedTable} />
             ) : (

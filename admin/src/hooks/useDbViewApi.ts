@@ -39,7 +39,7 @@ export const useDbViewApi = () => {
       post<{
         data?: { columns: string[]; rows: Record<string, unknown>[]; rowCount: number; durationMs: number; truncated: boolean };
         error?: string;
-      }>(`${BASE}/query/execute`, { data: { sql, limit, connection } }),
+      }>(`${BASE}/query/execute`, { sql, limit, connection }),
 
     explainQuery: (sql: string, type: 'explain' | 'explain-analyze', connection: string) =>
       post<{
@@ -48,7 +48,7 @@ export const useDbViewApi = () => {
         rows?: Record<string, unknown>[];
         durationMs?: number;
         error?: string;
-      }>(`${BASE}/query/explain`, { data: { sql, type, connection } }),
+      }>(`${BASE}/query/explain`, { sql, type, connection }),
 
     listHistory: () =>
       get<{ entries: Array<{ id: number; sql: string; connection: string; rowCount: number | null; durationMs: number | null; createdAt: string }> }>(
@@ -63,7 +63,7 @@ export const useDbViewApi = () => {
     createSavedQuery: (name: string, sql: string, connection: string) =>
       post<{ query: { id: number; name: string; sql: string } }>(
         `${BASE}/saved-queries`,
-        { data: { name, sql, connection } }
+        { name, sql, connection }
       ),
 
     deleteSavedQuery: (id: number) =>
