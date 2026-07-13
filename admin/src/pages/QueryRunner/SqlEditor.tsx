@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
-import MonacoEditor, { type OnMount } from '@monaco-editor/react';
+import { EditorState, Compartment } from '@codemirror/state';
+import { EditorView, keymap } from '@codemirror/view';
+import { basicSetup } from 'codemirror';
+import { sql } from '@codemirror/lang-sql';
+import { oneDark } from '@codemirror/theme-one-dark';
 import { Box, Flex, Button, SingleSelect, SingleSelectOption, Typography } from '@strapi/design-system';
 import { Play, Loader } from '@strapi/icons';
 import { useDbViewTheme } from '../../hooks/useDbViewTheme';
-// Configures the bundled Monaco instance — must be imported before the editor renders.
-import '../../utils/monaco';
 
 interface Props {
   sql: string;
@@ -17,58 +19,101 @@ interface Props {
 
 const ROW_LIMITS = [25, 50, 100, 500, 1000, 5000];
 
-export const SqlEditor = ({ sql, onChange, onRun, onExplain, onExplainAnalyze, isLoading }: Props) => {
+export const SqlEditor = ({
+  sql: sqlValue,
+  onChange,
+  onRun,
+  onExplain,
+  onExplainAnalyze,
+  isLoading,
+}: Props) => {
   const [limit, setLimit] = useState(100);
-  const sqlRef = useRef(sql);
   const { colors, isDark } = useDbViewTheme();
 
-  // Keybindings registered on mount close over this ref, so it must track the latest value.
+  const hostRef = useRef<HTMLDivElement | null>(null);
+  const viewRef = useRef<EditorView | null>(null);
+  const themeRef = useRef(new Compartment());
+
+  // Callbacks are read through refs so the editor never has to be rebuilt when
+  // a parent re-render hands us new function identities.
+  const latest = useRef({ sql: sqlValue, limit, onChange, onRun });
+  latest.current = { sql: sqlValue, limit, onChange, onRun };
+
   useEffect(() => {
-    sqlRef.current = sql;
-  }, [sql]);
+    if (!hostRef.current) return;
 
-  const handleChange = (val: string | undefined) => {
-    const v = val ?? '';
-    sqlRef.current = v;
-    onChange(v);
-  };
+    const view = new EditorView({
+      parent: hostRef.current,
+      state: EditorState.create({
+        doc: latest.current.sql,
+        extensions: [
+          basicSetup,
+          sql(),
+          keymap.of([
+            {
+              key: 'Mod-Enter',
+              preventDefault: true,
+              run: () => {
+                const { sql: current, limit: rows, onRun: run } = latest.current;
+                if (current.trim()) run(current, rows);
+                return true;
+              },
+            },
+          ]),
+          EditorView.updateListener.of((update) => {
+            if (update.docChanged) {
+              latest.current.onChange(update.state.doc.toString());
+            }
+          }),
+          EditorView.theme({ '&': { height: '240px' }, '.cm-scroller': { fontFamily: 'monospace' } }),
+          themeRef.current.of(isDark ? oneDark : []),
+        ],
+      }),
+    });
 
-  const handleMount: OnMount = (editor, monaco) => {
-    // Ctrl/Cmd+Enter to run
-    editor.addCommand(
-      monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
-      () => onRun(sqlRef.current, limit)
-    );
-  };
+    viewRef.current = view;
+    return () => {
+      view.destroy();
+      viewRef.current = null;
+    };
+    // Built once; value and theme are pushed in via the effects below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Push external changes (insert table, load from history/saved) into the document.
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+
+    const current = view.state.doc.toString();
+    if (current === sqlValue) return; // Echo of the user's own typing — leave the cursor alone.
+
+    view.dispatch({
+      changes: { from: 0, to: current.length, insert: sqlValue },
+    });
+  }, [sqlValue]);
+
+  // Swap the theme in place rather than tearing the editor down.
+  useEffect(() => {
+    viewRef.current?.dispatch({
+      effects: themeRef.current.reconfigure(isDark ? oneDark : []),
+    });
+  }, [isDark]);
 
   return (
     <Box>
-      <Box borderRadius="4px" style={{ border: `1px solid ${colors.neutral200}`, overflow: 'hidden' }}>
-        <MonacoEditor
-          height="240px"
-          language="sql"
-          value={sql}
-          onChange={handleChange}
-          onMount={handleMount}
-          options={{
-            minimap: { enabled: false },
-            wordWrap: 'on',
-            fontSize: 13,
-            fontFamily: 'monospace',
-            lineNumbers: 'on',
-            scrollBeyondLastLine: false,
-            automaticLayout: true,
-            tabSize: 2,
-          }}
-          theme={isDark ? 'vs-dark' : 'vs'}
-        />
+      <Box
+        borderRadius="4px"
+        style={{ border: `1px solid ${colors.neutral200}`, overflow: 'hidden' }}
+      >
+        <div ref={hostRef} />
       </Box>
 
       <Flex marginTop={3} gap={2} alignItems="center" wrap="wrap">
         <Button
           startIcon={isLoading ? <Loader /> : <Play />}
-          onClick={() => onRun(sql, limit)}
-          disabled={isLoading || !sql.trim()}
+          onClick={() => onRun(sqlValue, limit)}
+          disabled={isLoading || !sqlValue.trim()}
           size="S"
         >
           Run (⌘↵)
@@ -76,8 +121,8 @@ export const SqlEditor = ({ sql, onChange, onRun, onExplain, onExplainAnalyze, i
 
         <Button
           variant="secondary"
-          onClick={() => onExplain(sql)}
-          disabled={isLoading || !sql.trim()}
+          onClick={() => onExplain(sqlValue)}
+          disabled={isLoading || !sqlValue.trim()}
           size="S"
         >
           EXPLAIN
@@ -85,8 +130,8 @@ export const SqlEditor = ({ sql, onChange, onRun, onExplain, onExplainAnalyze, i
 
         <Button
           variant="secondary"
-          onClick={() => onExplainAnalyze(sql)}
-          disabled={isLoading || !sql.trim()}
+          onClick={() => onExplainAnalyze(sqlValue)}
+          disabled={isLoading || !sqlValue.trim()}
           size="S"
         >
           EXPLAIN ANALYZE
