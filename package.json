@@ -1,6 +1,6 @@
 {
   "name": "@swamp-crocodile/strapi-plugin-dbview",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Read-only database browser and SQL query runner for Strapi v5 admin panel",
   "type": "commonjs",
   "scripts": {

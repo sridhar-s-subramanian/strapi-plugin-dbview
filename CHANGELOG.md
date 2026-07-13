@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 _Nothing yet._
 
+## [0.1.2] - 2026-07-13
+
+Admin UI improvements to the Database Browser and Query Runner.
+
+### Fixed
+
+- **Column filters** now render in a popover anchored to the filter icon
+  instead of an inline box that overlapped rows (or was hidden below short
+  tables). Reopening a filtered column shows the applied operator and value
+  instead of an empty form, and the fields/buttons inside are aligned.
+
+### Changed
+
+- **Sortable columns** show an always-visible sort indicator; the active
+  sort direction is highlighted.
+- **Query editor** font increased to 15px for readability.
+- **Saved Queries** list is capped in height with its own scroll so it no
+  longer grows unbounded.
+- **Table sidebars** (both pages) are wider and scroll horizontally, showing
+  full table names instead of truncating them.
+
 ## [0.1.1] - 2026-07-13
 
 Maintenance release. No changes to runtime behaviour or the published bundle —
@@ -71,6 +92,7 @@ Strapi v5 admin panel.
 - Query executions are audited to the application log (blocked at `warn`,
   successful reads at `debug`) rather than a database table.
 
-[Unreleased]: https://github.com/sridhar-s-subramanian/strapi-plugin-dbview/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/sridhar-s-subramanian/strapi-plugin-dbview/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/sridhar-s-subramanian/strapi-plugin-dbview/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/sridhar-s-subramanian/strapi-plugin-dbview/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/sridhar-s-subramanian/strapi-plugin-dbview/releases/tag/v0.1.0
