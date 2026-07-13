@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 _Nothing yet._
 
+## [0.1.3] - 2026-07-13
+
+### Performance
+
+- **Query Runner** no longer re-renders the table sidebar, results grid, and
+  saved-queries panel on every keystroke. Typing in the SQL editor now only
+  updates the editor, making it feel responsive even with a large table list or
+  result set loaded. Achieved by memoizing the heavy panels and keeping their
+  props referentially stable.
+
+### Documentation
+
+- Added npm version, downloads, CI, Strapi, Node, TypeScript, and license badges
+  to the README.
+
 ## [0.1.2] - 2026-07-13
 
 Admin UI improvements to the Database Browser and Query Runner.
@@ -92,7 +107,8 @@ Strapi v5 admin panel.
 - Query executions are audited to the application log (blocked at `warn`,
   successful reads at `debug`) rather than a database table.
 
-[Unreleased]: https://github.com/sridhar-s-subramanian/strapi-plugin-dbview/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/sridhar-s-subramanian/strapi-plugin-dbview/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/sridhar-s-subramanian/strapi-plugin-dbview/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/sridhar-s-subramanian/strapi-plugin-dbview/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/sridhar-s-subramanian/strapi-plugin-dbview/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/sridhar-s-subramanian/strapi-plugin-dbview/releases/tag/v0.1.0

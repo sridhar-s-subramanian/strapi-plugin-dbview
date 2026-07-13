@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { Box, Searchbar, Typography, Flex, Loader, IconButton, Tooltip } from '@strapi/design-system';
 import { GridFour, ExternalLink } from '@strapi/icons';
 import { useNavigate } from 'react-router-dom';
@@ -10,7 +10,7 @@ interface Props {
   onShowStructure: (tableName: string) => void;
 }
 
-export const QueryRunnerSidebar = ({ onInsertTable, onShowStructure }: Props) => {
+export const QueryRunnerSidebar = memo(function QueryRunnerSidebar({ onInsertTable, onShowStructure }: Props) {
   const [tables, setTables] = useState<Array<{ name: string }>>([]);
   const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -105,4 +105,4 @@ export const QueryRunnerSidebar = ({ onInsertTable, onShowStructure }: Props) =>
       </Box>
     </Box>
   );
-};
+});

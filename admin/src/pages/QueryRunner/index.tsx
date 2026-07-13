@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Page, Layouts, useQueryParams } from '@strapi/strapi/admin';
 import { Box, Flex, Typography } from '@strapi/design-system';
 import { useBrowsePermission, useQueryPermission } from '../../hooks/usePermissions';
@@ -35,6 +35,11 @@ export const QueryRunner = () => {
   const [result, setResult] = useState<ResultState>(null);
 
   const api = useDbViewApi();
+  // useDbViewApi returns a fresh object each render; hold the latest in a ref so
+  // the callbacks below can stay referentially stable (and memoized children
+  // don't re-render on every keystroke).
+  const apiRef = useRef(api);
+  apiRef.current = api;
 
   // Handle ?structure= URL param from the Database Browser
   useEffect(() => {
@@ -44,10 +49,10 @@ export const QueryRunner = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qp.structure]);
 
-  const handleSqlChange = (newSql: string) => {
+  const handleSqlChange = useCallback((newSql: string) => {
     setSqlState(newSql);
     sqlRef.current = newSql;
-  };
+  }, []);
 
   const handleRun = async (runSql: string, limit: number) => {
     if (!runSql.trim()) return;
@@ -115,11 +120,11 @@ export const QueryRunner = () => {
     }
   };
 
-  const handleShowStructure = async (tableName: string) => {
+  const handleShowStructure = useCallback(async (tableName: string) => {
     setIsLoading(true);
     setResult(null);
     try {
-      const { data } = await api.getStructure(tableName);
+      const { data } = await apiRef.current.getStructure(tableName);
       const structure = data.structure as { table: string; columns: unknown[]; indexes: unknown[] };
       setResult({ kind: 'structure', ...structure });
     } catch {
@@ -127,20 +132,22 @@ export const QueryRunner = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const handleInsertTable = (tableName: string) => {
+  const handleInsertTable = useCallback((tableName: string) => {
     // Empty editor → seed a full SELECT; otherwise insert the name at the caret.
     if (!sqlRef.current.trim()) {
       handleSqlChange(`SELECT * FROM ${tableName}`);
       return;
     }
     editorRef.current?.insertAtCursor(tableName);
-  };
+  }, [handleSqlChange]);
 
-  const handleLoadQuery = (loadedSql: string, _conn: string) => {
+  const handleLoadQuery = useCallback((loadedSql: string) => {
     handleSqlChange(loadedSql);
-  };
+  }, [handleSqlChange]);
+
+  const getCurrentSql = useCallback(() => sqlRef.current, []);
 
   if (isLoadingBrowse || isLoadingQuery) return <Page.Loading />;
   if (!canBrowse && !canQuery) return <Page.NoPermissions />;
@@ -219,7 +226,7 @@ export const QueryRunner = () => {
           {/* Right panel: saved queries */}
           <Box style={{ width: 240, flexShrink: 0 }}>
             <SavedQueriesPanel
-              currentSql={sql}
+              getCurrentSql={getCurrentSql}
               currentConnection={connection}
               onLoad={handleLoadQuery}
             />

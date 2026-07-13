@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, memo } from 'react';
 import { Box, Typography, Flex, IconButton, Tooltip, Modal, Button, TextInput, Field } from '@strapi/design-system';
 import { Trash, Plus } from '@strapi/icons';
 import { useDbViewApi } from '../../hooks/useDbViewApi';
@@ -12,12 +12,13 @@ interface SavedQuery {
 }
 
 interface Props {
-  currentSql: string;
+  /** Read the current editor SQL lazily, so this panel doesn't re-render on every keystroke. */
+  getCurrentSql: () => string;
   currentConnection: string;
   onLoad: (sql: string, connection: string) => void;
 }
 
-export const SavedQueriesPanel = ({ currentSql, currentConnection, onLoad }: Props) => {
+export const SavedQueriesPanel = memo(function SavedQueriesPanel({ getCurrentSql, currentConnection, onLoad }: Props) {
   const [queries, setQueries] = useState<SavedQuery[]>([]);
   const [saveOpen, setSaveOpen] = useState(false);
   const [saveName, setSaveName] = useState('');
@@ -32,6 +33,7 @@ export const SavedQueriesPanel = ({ currentSql, currentConnection, onLoad }: Pro
   useEffect(() => { load(); }, [load]);
 
   const handleSave = async () => {
+    const currentSql = getCurrentSql();
     if (!saveName.trim() || !currentSql.trim()) return;
     try {
       await api.createSavedQuery(saveName.trim(), currentSql, currentConnection);
@@ -126,4 +128,4 @@ export const SavedQueriesPanel = ({ currentSql, currentConnection, onLoad }: Pro
       )}
     </Box>
   );
-};
+});

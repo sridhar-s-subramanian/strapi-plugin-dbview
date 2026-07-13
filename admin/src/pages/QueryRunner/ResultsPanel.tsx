@@ -1,6 +1,6 @@
 import { Box, Flex, Typography } from '@strapi/design-system';
 import { RowDetailModal } from '../DatabaseBrowser/RowDetailModal';
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { useDbViewTheme } from '../../hooks/useDbViewTheme';
 
 interface Props {
@@ -13,7 +13,7 @@ interface Props {
 
 const REDACTED_MASK = '[REDACTED]';
 
-export const ResultsPanel = ({ columns, rows, rowCount, durationMs, truncated }: Props) => {
+export const ResultsPanel = memo(function ResultsPanel({ columns, rows, rowCount, durationMs, truncated }: Props) {
   const [detailRow, setDetailRow] = useState<Record<string, unknown> | null>(null);
   const { colors } = useDbViewTheme();
 
@@ -130,4 +130,4 @@ export const ResultsPanel = ({ columns, rows, rowCount, durationMs, truncated }:
       )}
     </Box>
   );
-};
+});
