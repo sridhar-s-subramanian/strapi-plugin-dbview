@@ -39,7 +39,8 @@
   "files": [
     "dist",
     "strapi-server.js",
-    "strapi-admin.js"
+    "strapi-admin.js",
+    "CHANGELOG.md"
   ],
   "dependencies": {
     "node-sql-parser": "^5.4.0"
