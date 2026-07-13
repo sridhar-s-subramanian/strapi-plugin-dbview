@@ -19,13 +19,6 @@ const ACTIONS = [
   },
   {
     section: 'plugins',
-    displayName: 'View Query History',
-    uid: 'history.read',
-    subCategory: 'Query Runner',
-    pluginName: PLUGIN_NAME,
-  },
-  {
-    section: 'plugins',
     displayName: 'Manage Saved Queries',
     uid: 'saved-queries.manage',
     subCategory: 'Query Runner',

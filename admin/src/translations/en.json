@@ -14,7 +14,6 @@
   "runner.explain_analyze": "EXPLAIN ANALYZE",
   "runner.save": "Save Query",
   "runner.saved_queries": "Saved Queries",
-  "runner.history": "Recent History",
   "runner.structure": "Structure",
   "runner.no_results": "No results.",
   "runner.error": "Query error",

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Page, Layouts, useQueryParams } from '@strapi/strapi/admin';
-import { Box, Flex, Tabs, Typography } from '@strapi/design-system';
+import { Box, Flex, Typography } from '@strapi/design-system';
 import { useBrowsePermission, useQueryPermission } from '../../hooks/usePermissions';
 import { useDbViewApi } from '../../hooks/useDbViewApi';
 import { SqlEditor } from './SqlEditor';
@@ -9,7 +9,6 @@ import { ResultsPanel } from './ResultsPanel';
 import { ExplainPlan } from './ExplainPlan';
 import { StructureView } from './StructureView';
 import { SavedQueriesPanel } from './SavedQueriesPanel';
-import { HistoryPanel } from './HistoryPanel';
 
 type ResultState =
   | null
@@ -212,28 +211,13 @@ export const QueryRunner = () => {
             )}
           </Box>
 
-          {/* Right panels: saved + history */}
+          {/* Right panel: saved queries */}
           <Box style={{ width: 240, flexShrink: 0 }}>
-            <Tabs.Root defaultValue="saved">
-              <Tabs.List aria-label="Query panels">
-                <Tabs.Trigger value="saved">Saved</Tabs.Trigger>
-                <Tabs.Trigger value="history">History</Tabs.Trigger>
-              </Tabs.List>
-              <Tabs.Content value="saved">
-                <Box paddingTop={3}>
-                  <SavedQueriesPanel
-                    currentSql={sql}
-                    currentConnection={connection}
-                    onLoad={handleLoadQuery}
-                  />
-                </Box>
-              </Tabs.Content>
-              <Tabs.Content value="history">
-                <Box paddingTop={3}>
-                  <HistoryPanel onLoad={handleLoadQuery} />
-                </Box>
-              </Tabs.Content>
-            </Tabs.Root>
+            <SavedQueriesPanel
+              currentSql={sql}
+              currentConnection={connection}
+              onLoad={handleLoadQuery}
+            />
           </Box>
         </Flex>
       </Layouts.Content>

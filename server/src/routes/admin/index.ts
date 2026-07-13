@@ -50,14 +50,6 @@ export default {
       config: { policies: [perm('query')] },
     },
 
-    // ── History ───────────────────────────────────────────────────────────────
-    {
-      method: 'GET',
-      path: '/history',
-      handler: 'history.list',
-      config: { policies: [perm('history.read')] },
-    },
-
     // ── Saved queries ─────────────────────────────────────────────────────────
     {
       method: 'GET',

@@ -6,7 +6,6 @@ const ACTION = (uid: string) => `plugin::${PLUGIN_ID}.${uid}`;
 const PERMISSIONS = {
   browse: [{ action: ACTION('browse') }],
   query: [{ action: ACTION('query') }],
-  historyRead: [{ action: ACTION('history.read') }],
   savedQueriesManage: [{ action: ACTION('saved-queries.manage') }],
 };
 
@@ -18,11 +17,6 @@ export const useBrowsePermission = () => {
 export const useQueryPermission = () => {
   const { allowedActions, isLoading } = useRBAC(PERMISSIONS.query);
   return { canQuery: allowedActions.canQuery ?? false, isLoading };
-};
-
-export const useHistoryPermission = () => {
-  const { allowedActions, isLoading } = useRBAC(PERMISSIONS.historyRead);
-  return { canViewHistory: allowedActions.canHistoryRead ?? false, isLoading };
 };
 
 export const useSavedQueriesPermission = () => {

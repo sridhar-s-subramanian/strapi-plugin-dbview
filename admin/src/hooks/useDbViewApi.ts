@@ -50,11 +50,6 @@ export const useDbViewApi = () => {
         error?: string;
       }>(`${BASE}/query/explain`, { sql, type, connection }),
 
-    listHistory: () =>
-      get<{ entries: Array<{ id: number; sql: string; connection: string; rowCount: number | null; durationMs: number | null; createdAt: string }> }>(
-        `${BASE}/history`
-      ),
-
     listSavedQueries: () =>
       get<{ queries: Array<{ id: number; name: string; sql: string; connection: string }> }>(
         `${BASE}/saved-queries`

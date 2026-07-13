@@ -22,7 +22,6 @@ const defaults: DbViewConfig = {
   maxRowLimit: 5000,
   denyList: [],
   redactedColumnPatterns: ['password', '*_token', '*_secret', 'hash', 'salt', 'secret', 'private_key', 'reset_password_token', 'confirm_token'],
-  historyRetentionDays: 30,
   queryTimeoutSeconds: 15,
 };
 

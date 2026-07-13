@@ -59,6 +59,17 @@ function getExplainPrefix(dialect: Dialect, analyze: boolean): string {
   return 'EXPLAIN QUERY PLAN'; // SQLite — no analyze mode
 }
 
+/**
+ * Wrap a validated SELECT in an outer LIMIT. The closing paren and LIMIT sit on
+ * their own lines so a trailing single-line comment (`-- …`) in the inner query
+ * cannot comment them out — otherwise the enforced LIMIT could be silently
+ * dropped. `limit` is always an integer constant derived from config.
+ */
+function wrapWithLimit(sql: string, limit: number): string {
+  const cleanSql = sql.trimEnd().replace(/;+$/, '');
+  return `SELECT * FROM (\n${cleanSql}\n) AS _dbview_sub LIMIT ${limit}`;
+}
+
 export default ({ strapi }: { strapi: Core.Strapi }) => {
   function getConfig() {
     const plugin = strapi.plugin('strapi-dbview');
@@ -75,6 +86,11 @@ export default ({ strapi }: { strapi: Core.Strapi }) => {
     return new Set([...BUILT_IN_DENY_LIST, ...userDenyList].map((t) => t.toLowerCase()));
   }
 
+  /**
+   * Audit to the application log rather than the database. A row per query would
+   * grow without bound; blocked attempts are the security-relevant signal and are
+   * logged at warn level, successful reads at debug.
+   */
   async function audit(opts: {
     userId: number | null;
     sql: string;
@@ -85,19 +101,18 @@ export default ({ strapi }: { strapi: Core.Strapi }) => {
     durationMs?: number;
   }) {
     try {
-      await strapi.db
-        .query('plugin::strapi-dbview.query-history')
-        .create({
-          data: {
-            userId: opts.userId,
-            connection: opts.connection,
-            sql: opts.sql,
-            allowed: opts.allowed,
-            reason: opts.reason ?? null,
-            rowCount: opts.rowCount ?? null,
-            durationMs: opts.durationMs ? Math.round(opts.durationMs) : null,
-          },
-        });
+      const who = opts.userId === null ? 'unknown user' : `admin user ${opts.userId}`;
+      const sql = opts.sql.replace(/\s+/g, ' ').trim().slice(0, 500);
+
+      if (opts.allowed) {
+        strapi.log.debug(
+          `[dbview] ${who} ran on "${opts.connection}": ${sql} — ${opts.rowCount ?? 0} rows in ${Math.round(opts.durationMs ?? 0)}ms`
+        );
+      } else {
+        strapi.log.warn(
+          `[dbview] blocked query from ${who} on "${opts.connection}": ${opts.reason} — ${sql}`
+        );
+      }
     } catch {
       // Audit failures must never block a query
     }
@@ -139,10 +154,18 @@ export default ({ strapi }: { strapi: Core.Strapi }) => {
     }
 
     // ── Layer 1b: AST verification ──────────────────────────────────────────
+    // Fail closed: the parser must positively confirm the statement is a
+    // SELECT. isSelectOnly is false both for detected non-SELECTs *and* for SQL
+    // that no dialect could parse. Allowing the latter through would skip the
+    // table-scope check below (which only runs on parsed tables), so a query
+    // the parser cannot understand could read a deny-listed table.
     const parsed = parseSQL(sql);
 
-    if (!parsed.isSelectOnly && parsed.tables.length > 0) {
-      const reason = 'Only SELECT statements are permitted.';
+    if (!parsed.isSelectOnly) {
+      const reason =
+        parsed.tables.length > 0
+          ? 'Only SELECT statements are permitted.'
+          : 'This query could not be verified as a read-only SELECT and was blocked.';
       await audit({ userId, sql, connection, allowed: false, reason });
       return { rejected: true, reason };
     }
@@ -199,9 +222,10 @@ export default ({ strapi }: { strapi: Core.Strapi }) => {
       if (rejection) return rejection;
 
       // ── Layer 3: Enforced LIMIT wrap ──────────────────────────────────────
-      const effectiveLimit = Math.min(Math.max(1, limit || cfg.defaultRowLimit), cfg.maxRowLimit);
-      const cleanSql = sql.trimEnd().replace(/;+$/, '');
-      const wrappedSql = `SELECT * FROM (${cleanSql}) AS _dbview_sub LIMIT ${effectiveLimit}`;
+      const effectiveLimit = Math.floor(
+        Math.min(Math.max(1, limit || cfg.defaultRowLimit), cfg.maxRowLimit)
+      );
+      const wrappedSql = wrapWithLimit(sql, effectiveLimit);
 
       // ── Layers 4 + 5: Rollback transaction (+ optional timeout) ──────────
       let rows: Record<string, unknown>[] = [];
@@ -265,9 +289,8 @@ export default ({ strapi }: { strapi: Core.Strapi }) => {
       if (rejection) return rejection;
 
       // Wrap with LIMIT so EXPLAIN ANALYZE doesn't scan full tables
-      const effectiveLimit = Math.min(cfg.defaultRowLimit, cfg.maxRowLimit);
-      const cleanSql = sql.trimEnd().replace(/;+$/, '');
-      const wrappedSql = `SELECT * FROM (${cleanSql}) AS _dbview_sub LIMIT ${effectiveLimit}`;
+      const effectiveLimit = Math.floor(Math.min(cfg.defaultRowLimit, cfg.maxRowLimit));
+      const wrappedSql = wrapWithLimit(sql, effectiveLimit);
       const prefix = getExplainPrefix(dialect, type === 'explain-analyze');
       const explainSql = `${prefix} ${wrappedSql}`;
 

@@ -9,9 +9,9 @@ Inspired by [filament-dbview](https://github.com/sridhar-s-subramanian/filament-
 ## Features
 
 - **Database Browser** — Browse every table in your database with pagination, sorting, column filtering, row detail view, and FK preview. Export data as CSV or JSON.
-- **Query Runner** — Write and run `SELECT` queries with a Monaco SQL editor. Supports `EXPLAIN` and `EXPLAIN ANALYZE`. Save queries for later, browse recent history.
+- **Query Runner** — Write and run `SELECT` queries with a CodeMirror SQL editor. Supports `EXPLAIN` and `EXPLAIN ANALYZE`. Save queries for later.
 - **Strictly read-only** — Five independent security layers enforce read-only access. No `INSERT`, `UPDATE`, `DELETE`, or DDL can ever execute, regardless of how the SQL is crafted.
-- **Strapi RBAC** — Uses Strapi's built-in admin permission system. Access is scoped per role with four granular permissions.
+- **Strapi RBAC** — Uses Strapi's built-in admin permission system. Access is scoped per role with three granular permissions.
 - **Sensitive column redaction** — Columns matching patterns like `password`, `*_token`, `*_secret` are automatically replaced with `[REDACTED]` before any data leaves the server.
 - **Multi-database** — Supports PostgreSQL, MySQL/MySQL2, and SQLite3.
 
@@ -35,6 +35,14 @@ Inspired by [filament-dbview](https://github.com/sridhar-s-subramanian/filament-
 npm install @swamp-crocodile/strapi-plugin-dbview
 ```
 
+The plugin reuses the host admin's `@strapi/design-system` and `@strapi/icons` rather than bundling its own copy — sharing them is what keeps React context intact. They are declared as peer dependencies, so if your app does not already have them as direct dependencies, install them alongside:
+
+```bash
+npm install @strapi/design-system @strapi/icons
+```
+
+pnpm installs peers automatically by default; npm and yarn do not, and will fail the admin build with `Could not resolve "@strapi/icons"`.
+
 ---
 
 ## Configuration
@@ -51,7 +59,6 @@ export default {
       defaultRowLimit: 100,
       maxRowLimit: 5000,
       queryTimeoutSeconds: 15,
-      historyRetentionDays: 30,
       denyList: [],
       redactedColumnPatterns: [
         'password',
@@ -77,7 +84,6 @@ export default {
 | `defaultRowLimit` | `number` | `100` | Default number of rows returned per query/browse request |
 | `maxRowLimit` | `number` | `5000` | Hard cap on rows. Requests above this are clamped, not rejected |
 | `queryTimeoutSeconds` | `number` | `15` | Statement-level timeout applied inside the query transaction |
-| `historyRetentionDays` | `number` | `30` | Query history older than this is pruned on startup |
 | `denyList` | `string[]` | `[]` | Additional table names to block. Merged with the built-in deny list |
 | `redactedColumnPatterns` | `string[]` | see above | Glob patterns matched against column names. Matching columns show `[REDACTED]` |
 | `readOnlyConnection` | `string` | — | Name of an alternative Knex connection configured in `config/database.ts`. Use this to point the plugin at a DB user with only `SELECT` privilege (Layer 5 security) |
@@ -92,7 +98,6 @@ After enabling the plugin, go to **Settings → Roles** in the Strapi admin and 
 |---|---|
 | `plugin::strapi-dbview.browse` | Database Browser page + schema/structure endpoints |
 | `plugin::strapi-dbview.query` | Query Runner — execute SELECT, EXPLAIN, EXPLAIN ANALYZE |
-| `plugin::strapi-dbview.history.read` | View past query history |
 | `plugin::strapi-dbview.saved-queries.manage` | Save, load, and delete saved queries |
 
 Roles without `browse` or `query` permission see a "no permissions" screen. The DB View menu link itself is hidden from the sidebar for users who lack `browse`.
@@ -124,8 +129,9 @@ After installation and configuration:
 - Adjust the **row limit** dropdown to control result size (capped at `maxRowLimit`).
 - Click table names in the left sidebar to insert them into the editor.
 - Click the structure icon next to a table to view its columns and indexes inline.
-- Use the **Saved** tab to save frequently-used queries by name and reload them later.
-- Use the **History** tab to see recent queries and click to reload them.
+- Use the **Saved Queries** panel to save frequently-used queries by name and reload them later.
+
+> Queries are not persisted to a history table. Executions are written to the application log instead — blocked queries at `warn` level, successful reads at `debug`.
 
 ---
 

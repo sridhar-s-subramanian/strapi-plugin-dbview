@@ -87,7 +87,6 @@ export interface DbViewConfig {
   maxRowLimit: number;
   denyList: string[];
   redactedColumnPatterns: string[];
-  historyRetentionDays: number;
   queryTimeoutSeconds: number;
   readOnlyConnection?: string;
 }
