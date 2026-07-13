@@ -32,7 +32,7 @@ export const TableSidebar = ({ selectedTable, onSelect }: Props) => {
       borderRadius="4px"
       shadow="filterShadow"
       padding={4}
-      style={{ width: 240, flexShrink: 0, alignSelf: 'flex-start', position: 'sticky', top: 0 }}
+      style={{ width: 280, flexShrink: 0, alignSelf: 'flex-start', position: 'sticky', top: 0 }}
     >
       <Searchbar
         name="tableSearch"
@@ -46,7 +46,7 @@ export const TableSidebar = ({ selectedTable, onSelect }: Props) => {
         Search
       </Searchbar>
 
-      <Box marginTop={2} style={{ maxHeight: '75vh', overflowY: 'auto', overflowX: 'hidden' }}>
+      <Box marginTop={2} style={{ maxHeight: '75vh', overflow: 'auto' }}>
         {isLoading ? (
           <Flex justifyContent="center" paddingTop={4}>
             <Loader small />
@@ -58,7 +58,8 @@ export const TableSidebar = ({ selectedTable, onSelect }: Props) => {
             </Typography>
           </Box>
         ) : (
-          filtered.map((table) => {
+          <Box style={{ minWidth: 'max-content' }}>
+          {filtered.map((table) => {
             const isSelected = selectedTable === table.name;
             return (
               <Box
@@ -81,8 +82,6 @@ export const TableSidebar = ({ selectedTable, onSelect }: Props) => {
                     fontFamily: 'monospace',
                     fontSize: 13,
                     display: 'block',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
                   }}
                   title={table.name}
@@ -91,7 +90,8 @@ export const TableSidebar = ({ selectedTable, onSelect }: Props) => {
                 </Typography>
               </Box>
             );
-          })
+          })}
+          </Box>
         )}
       </Box>
     </Box>

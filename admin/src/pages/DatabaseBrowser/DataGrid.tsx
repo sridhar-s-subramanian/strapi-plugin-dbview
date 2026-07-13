@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTheme } from 'styled-components';
-import { Box, Flex, Typography, Pagination, PreviousLink, NextLink, PageLink, Loader, Badge, IconButton, Button, Tooltip } from '@strapi/design-system';
-import { ArrowUp, ArrowDown, Filter, Link } from '@strapi/icons';
+import { Box, Flex, Typography, Pagination, PreviousLink, NextLink, PageLink, Loader, Badge, IconButton, Button, Tooltip, Popover } from '@strapi/design-system';
+import { CaretUp, CaretDown, Filter, Link } from '@strapi/icons';
 import { useDbViewApi } from '../../hooks/useDbViewApi';
 import { RowDetailModal } from './RowDetailModal';
 import { FKPreviewModal } from './FKPreviewModal';
@@ -126,6 +126,8 @@ export const DataGrid = ({ tableName }: Props) => {
       delete next[col];
       return next;
     });
+    setOpenFilter(null);
+    setPage(1);
   };
 
   const columnInfoMap = new Map(columns.map((c) => [c.name, c]));
@@ -213,24 +215,50 @@ export const DataGrid = ({ tableName }: Props) => {
                       }}
                     >
                       <Flex alignItems="center" gap={1}>
-                        <span
-                          style={{ cursor: 'pointer', fontFamily: 'monospace', fontWeight: 600 }}
-                          onClick={() => !info?.isSensitive && handleSort(col)}
-                        >
-                          {col}
-                        </span>
-                        {sort?.column === col && (
-                          sort.direction === 'asc' ? <ArrowUp width="12" /> : <ArrowDown width="12" />
+                        {info?.isSensitive ? (
+                          <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{col}</span>
+                        ) : (
+                          <Flex
+                            alignItems="center"
+                            gap={1}
+                            style={{ cursor: 'pointer' }}
+                            onClick={() => handleSort(col)}
+                            title="Click to sort"
+                          >
+                            <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{col}</span>
+                            {/* Always-visible sort affordance; the active direction is highlighted. */}
+                            <Flex direction="column" style={{ lineHeight: 0 }}>
+                              <span style={{ display: 'flex', marginBottom: -4, color: sort?.column === col && sort.direction === 'asc' ? colors.primary600 : colors.neutral500 }}>
+                                <CaretUp width={11} height={11} />
+                              </span>
+                              <span style={{ display: 'flex', color: sort?.column === col && sort.direction === 'desc' ? colors.primary600 : colors.neutral500 }}>
+                                <CaretDown width={11} height={11} />
+                              </span>
+                            </Flex>
+                          </Flex>
                         )}
-                        {!info?.isSensitive && (
-                          <Tooltip description="Filter">
-                            <IconButton
-                              size="S"
-                              label="Filter"
-                              onClick={() => setOpenFilter(openFilter === col ? null : col)}
-                              style={{ color: isFiltered ? colors.primary600 : undefined }}
-                            ><Filter /></IconButton>
-                          </Tooltip>
+                        {info && !info.isSensitive && (
+                          <Popover.Root
+                            open={openFilter === col}
+                            onOpenChange={(open) => setOpenFilter(open ? col : null)}
+                          >
+                            <Popover.Trigger>
+                              <IconButton
+                                size="S"
+                                label={isFiltered ? `Edit filter on ${col}` : `Filter ${col}`}
+                                style={{ color: isFiltered ? colors.primary600 : undefined }}
+                              ><Filter /></IconButton>
+                            </Popover.Trigger>
+                            <Popover.Content>
+                              <ColumnFilter
+                                column={col}
+                                type={info.normalizedType as 'text'}
+                                current={filters[col]}
+                                onApply={handleApplyFilter}
+                                onClear={handleClearFilter}
+                              />
+                            </Popover.Content>
+                          </Popover.Root>
                         )}
                         {info?.foreignKeyTable && (
                           <Tooltip description={`→ ${info.foreignKeyTable}`}>
@@ -238,16 +266,6 @@ export const DataGrid = ({ tableName }: Props) => {
                           </Tooltip>
                         )}
                       </Flex>
-                      {openFilter === col && info && (
-                        <Box style={{ position: 'absolute', top: '100%', left: 0, zIndex: 100 }}>
-                          <ColumnFilter
-                            column={col}
-                            type={info.normalizedType as 'text'}
-                            onApply={handleApplyFilter}
-                            onClear={handleClearFilter}
-                          />
-                        </Box>
-                      )}
                     </th>
                   );
                 })}

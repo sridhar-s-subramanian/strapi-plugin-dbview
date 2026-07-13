@@ -36,7 +36,7 @@ export const QueryRunnerSidebar = ({ onInsertTable, onShowStructure }: Props) =>
       borderRadius="4px"
       shadow="filterShadow"
       padding={4}
-      style={{ width: 220, flexShrink: 0, alignSelf: 'flex-start', position: 'sticky', top: 0 }}
+      style={{ width: 280, flexShrink: 0, alignSelf: 'flex-start', position: 'sticky', top: 0 }}
     >
       <Typography variant="sigma" textColor="neutral600" marginBottom={3}>Tables</Typography>
 
@@ -52,13 +52,14 @@ export const QueryRunnerSidebar = ({ onInsertTable, onShowStructure }: Props) =>
         Search
       </Searchbar>
 
-      <Box marginTop={2} style={{ maxHeight: '65vh', overflowY: 'auto', overflowX: 'hidden' }}>
+      <Box marginTop={2} style={{ maxHeight: '65vh', overflow: 'auto' }}>
         {isLoading ? (
           <Flex justifyContent="center" paddingTop={4}><Loader small /></Flex>
         ) : filtered.length === 0 ? (
           <Typography variant="omega" textColor="neutral500">No tables.</Typography>
         ) : (
-          filtered.map((table) => (
+          <Box style={{ minWidth: 'max-content' }}>
+          {filtered.map((table) => (
             <Box
               key={table.name}
               padding={1}
@@ -87,12 +88,8 @@ export const QueryRunnerSidebar = ({ onInsertTable, onShowStructure }: Props) =>
                   textColor="primary600"
                   style={{
                     fontFamily: 'monospace',
-                    fontSize: 12,
+                    fontSize: 13,
                     cursor: 'pointer',
-                    flex: 1,
-                    minWidth: 0,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
                   }}
                   onClick={() => onInsertTable(table.name)}
@@ -102,7 +99,8 @@ export const QueryRunnerSidebar = ({ onInsertTable, onShowStructure }: Props) =>
                 </Typography>
               </Flex>
             </Box>
-          ))
+          ))}
+          </Box>
         )}
       </Box>
     </Box>

@@ -11,6 +11,8 @@ interface FilterState {
 interface Props {
   column: string;
   type: FilterType;
+  /** The filter currently applied to this column, so reopening shows it. */
+  current?: { op: string; value: unknown };
   onApply: (column: string, op: string, value: unknown) => void;
   onClear: (column: string) => void;
 }
@@ -51,9 +53,14 @@ function getOps(type: FilterType) {
 
 const NO_VALUE_OPS = new Set(['is_null', 'is_not_null']);
 
-export const ColumnFilter = ({ column, type, onApply, onClear }: Props) => {
+export const ColumnFilter = ({ column, type, current, onApply, onClear }: Props) => {
   const ops = getOps(type);
-  const [state, setState] = useState<FilterState>({ op: ops[0].value, value: '' });
+  // Seed from the applied filter (this component remounts each time the popover
+  // opens, so the initializer picks up the latest applied value).
+  const [state, setState] = useState<FilterState>(() => ({
+    op: current?.op ?? ops[0].value,
+    value: current?.value != null ? String(current.value) : '',
+  }));
 
   const needsValue = !NO_VALUE_OPS.has(state.op);
   const boolValue = type === 'boolean' ? state.op === 'eq' : undefined;
@@ -67,8 +74,8 @@ export const ColumnFilter = ({ column, type, onApply, onClear }: Props) => {
   };
 
   return (
-    <Box padding={2} background="neutral0" shadow="filterShadow" borderRadius="4px" style={{ minWidth: 200 }}>
-      <Flex direction="column" gap={2}>
+    <Box padding={2} style={{ width: 240 }}>
+      <Flex direction="column" gap={2} alignItems="stretch">
         <SingleSelect
           size="S"
           value={state.op}
@@ -91,8 +98,8 @@ export const ColumnFilter = ({ column, type, onApply, onClear }: Props) => {
         )}
 
         <Flex gap={2}>
-          <Button size="S" onClick={handleApply} variant="default">Apply</Button>
-          <Button size="S" onClick={() => { setState({ op: ops[0].value, value: '' }); onClear(column); }} variant="tertiary">
+          <Button size="S" onClick={handleApply} variant="default" style={{ flex: 1, justifyContent: 'center' }}>Apply</Button>
+          <Button size="S" onClick={() => { setState({ op: ops[0].value, value: '' }); onClear(column); }} variant="tertiary" style={{ flex: 1, justifyContent: 'center' }}>
             Clear
           </Button>
         </Flex>

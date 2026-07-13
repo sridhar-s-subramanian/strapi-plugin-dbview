@@ -65,7 +65,8 @@ export const SavedQueriesPanel = ({ currentSql, currentConnection, onLoad }: Pro
       {queries.length === 0 ? (
         <Typography variant="omega" textColor="neutral500">No saved queries.</Typography>
       ) : (
-        queries.map((q) => (
+        <Box style={{ maxHeight: '70vh', overflowY: 'auto', overflowX: 'hidden' }}>
+        {queries.map((q) => (
           <Box
             key={q.id}
             padding={2}
@@ -94,7 +95,8 @@ export const SavedQueriesPanel = ({ currentSql, currentConnection, onLoad }: Pro
               ><Trash /></IconButton>
             </Flex>
           </Box>
-        ))
+        ))}
+        </Box>
       )}
 
       {saveOpen && (

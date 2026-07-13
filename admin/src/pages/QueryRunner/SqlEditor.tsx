@@ -66,7 +66,10 @@ export const SqlEditor = forwardRef<SqlEditorHandle, Props>(function SqlEditor(
               latest.current.onChange(update.state.doc.toString());
             }
           }),
-          EditorView.theme({ '&': { height: '240px' }, '.cm-scroller': { fontFamily: 'monospace' } }),
+          EditorView.theme({
+            '&': { height: '240px', fontSize: '15px' },
+            '.cm-scroller': { fontFamily: 'monospace', lineHeight: '1.6' },
+          }),
           themeRef.current.of(isDark ? oneDark : []),
         ],
       }),
