@@ -1,5 +1,13 @@
 # @swamp-crocodile/strapi-plugin-dbview
 
+[![npm version](https://img.shields.io/npm/v/@swamp-crocodile/strapi-plugin-dbview.svg?logo=npm)](https://www.npmjs.com/package/@swamp-crocodile/strapi-plugin-dbview)
+[![npm downloads](https://img.shields.io/npm/dm/@swamp-crocodile/strapi-plugin-dbview.svg)](https://www.npmjs.com/package/@swamp-crocodile/strapi-plugin-dbview)
+[![CI](https://github.com/sridhar-s-subramanian/strapi-plugin-dbview/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/sridhar-s-subramanian/strapi-plugin-dbview/actions/workflows/ci.yml)
+[![Strapi v5](https://img.shields.io/badge/Strapi-v5-4945ff.svg?logo=strapi&logoColor=white)](https://strapi.io)
+[![Node.js](https://img.shields.io/node/v/@swamp-crocodile/strapi-plugin-dbview.svg?logo=node.js&logoColor=white)](https://nodejs.org)
+[![types](https://img.shields.io/npm/types/@swamp-crocodile/strapi-plugin-dbview.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![license](https://img.shields.io/npm/l/@swamp-crocodile/strapi-plugin-dbview.svg)](./LICENSE)
+
 A read-only database browser and SQL query runner for the Strapi v5 admin panel.
 
 Inspired by [filament-dbview](https://github.com/sridhar-s-subramanian/filament-dbview) — the same tool, built for Strapi.
