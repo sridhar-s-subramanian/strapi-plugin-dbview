@@ -13,6 +13,7 @@
     "test:ts:front": "tsc -p admin/tsconfig.json --noEmit",
     "test:ts:back": "tsc -p server/tsconfig.json --noEmit",
     "test:ts:spec": "tsc -p server/tsconfig.spec.json --noEmit",
+    "prepare": "git config core.hooksPath .githooks 2>/dev/null || true",
     "prepublishOnly": "npm run test && npm run build && npm run verify"
   },
   "publishConfig": {

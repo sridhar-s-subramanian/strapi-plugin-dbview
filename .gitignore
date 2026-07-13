@@ -52,3 +52,19 @@ temp/
 # yarn / pnpm lockfiles (keep package-lock.json for npm)
 yarn.lock
 pnpm-lock.yaml
+
+# yalc (local plugin linking during development)
+.yalc/
+yalc.lock
+
+# npm pack output
+*.tgz
+
+# Secrets / credentials (belt-and-suspenders with the pre-commit hook)
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_rsa.pub
+*.crt

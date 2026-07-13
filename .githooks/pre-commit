@@ -1,0 +1,37 @@
+#!/bin/sh
+# Pre-commit guard for @swamp-crocodile/strapi-plugin-dbview.
+# Blocks accidental commits of secrets, credential files, and build/dependency
+# artifacts. Installed via the "prepare" script (git config core.hooksPath).
+# Bypass in a genuine emergency with: git commit --no-verify
+
+fail() {
+  echo "✖ pre-commit blocked: $1" >&2
+  echo "  (fix the staged change, or bypass with --no-verify if you are certain)" >&2
+  exit 1
+}
+
+staged=$(git diff --cached --name-only --diff-filter=ACM)
+[ -z "$staged" ] && exit 0
+
+# 1) Block sensitive / generated files by path.
+echo "$staged" | while IFS= read -r f; do
+  case "$f" in
+    .env|.env.*)
+      [ "$f" = ".env.example" ] || fail "environment file staged: $f" ;;
+    *.pem|*.key|*.p12|*.pfx|*.crt|id_rsa|id_rsa.pub)
+      fail "credential/key file staged: $f" ;;
+    *.tgz)
+      fail "npm pack tarball staged: $f" ;;
+    node_modules/*|dist/*|*.tsbuildinfo)
+      fail "build/dependency artifact staged: $f" ;;
+  esac
+done || exit 1
+
+# 2) Block obvious secret material in the staged content.
+diff=$(git diff --cached --diff-filter=ACM -U0 -- $staged 2>/dev/null | grep '^+' | grep -v '^+++')
+
+echo "$diff" | grep -qE 'BEGIN ([A-Z ]+ )?PRIVATE KEY' && fail "a private key block is present in the staged content"
+echo "$diff" | grep -qE 'AKIA[0-9A-Z]{16}' && fail "an AWS access key id (AKIA…) is present in the staged content"
+echo "$diff" | grep -qiE '(aws_secret_access_key|secret_access_key)[[:space:]]*[:=][[:space:]]*['\''"][A-Za-z0-9/+]{20,}' && fail "an AWS secret access key is present in the staged content"
+
+exit 0
