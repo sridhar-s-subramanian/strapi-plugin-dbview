@@ -31,8 +31,10 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       typeof connection === 'string' ? connection : 'default'
     );
 
+    // A policy rejection is an expected result the user should see, not a
+    // transport error. Return 200 with an { error } field so the client renders
+    // the reason instead of throwing on a non-2xx status.
     if ('rejected' in result && result.rejected) {
-      ctx.status = 422;
       ctx.body = { error: result.reason };
       return;
     }
@@ -69,7 +71,6 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     );
 
     if ('rejected' in result && result.rejected) {
-      ctx.status = 422;
       ctx.body = { error: result.reason };
       return;
     }

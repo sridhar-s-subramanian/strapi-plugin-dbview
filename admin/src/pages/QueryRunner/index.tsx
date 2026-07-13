@@ -3,7 +3,7 @@ import { Page, Layouts, useQueryParams } from '@strapi/strapi/admin';
 import { Box, Flex, Typography } from '@strapi/design-system';
 import { useBrowsePermission, useQueryPermission } from '../../hooks/usePermissions';
 import { useDbViewApi } from '../../hooks/useDbViewApi';
-import { SqlEditor } from './SqlEditor';
+import { SqlEditor, type SqlEditorHandle } from './SqlEditor';
 import { QueryRunnerSidebar } from './TableSidebar';
 import { ResultsPanel } from './ResultsPanel';
 import { ExplainPlan } from './ExplainPlan';
@@ -17,6 +17,18 @@ type ResultState =
   | { kind: 'structure'; table: string; columns: unknown[]; indexes: unknown[] }
   | { kind: 'error'; message: string };
 
+/** Pull a human-readable message out of a thrown request error, whatever its shape. */
+function getRequestErrorMessage(err: unknown): string {
+  const body = (err as { response?: { data?: { error?: unknown } } })?.response?.data?.error;
+  if (typeof body === 'string' && body) return body;
+  if (body && typeof body === 'object' && 'message' in body) {
+    const m = (body as { message?: unknown }).message;
+    if (typeof m === 'string' && m) return m;
+  }
+  if (err instanceof Error && err.message) return err.message;
+  return 'An error occurred while running the query.';
+}
+
 export const QueryRunner = () => {
   const { canBrowse, isLoading: isLoadingBrowse } = useBrowsePermission();
   const { canQuery, isLoading: isLoadingQuery } = useQueryPermission();
@@ -27,6 +39,7 @@ export const QueryRunner = () => {
     return '';
   });
   const sqlRef = useRef(sql);
+  const editorRef = useRef<SqlEditorHandle>(null);
 
   const [connection] = useState('default');
   const [isLoading, setIsLoading] = useState(false);
@@ -59,8 +72,7 @@ export const QueryRunner = () => {
         setResult({ kind: 'data', ...data.data });
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'An error occurred.';
-      setResult({ kind: 'error', message: msg });
+      setResult({ kind: 'error', message: getRequestErrorMessage(err) });
     } finally {
       setIsLoading(false);
     }
@@ -84,7 +96,7 @@ export const QueryRunner = () => {
         });
       }
     } catch (err: unknown) {
-      setResult({ kind: 'error', message: err instanceof Error ? err.message : 'An error occurred.' });
+      setResult({ kind: 'error', message: getRequestErrorMessage(err) });
     } finally {
       setIsLoading(false);
     }
@@ -108,7 +120,7 @@ export const QueryRunner = () => {
         });
       }
     } catch (err: unknown) {
-      setResult({ kind: 'error', message: err instanceof Error ? err.message : 'An error occurred.' });
+      setResult({ kind: 'error', message: getRequestErrorMessage(err) });
     } finally {
       setIsLoading(false);
     }
@@ -129,9 +141,12 @@ export const QueryRunner = () => {
   };
 
   const handleInsertTable = (tableName: string) => {
-    const cursor = sqlRef.current;
-    const newSql = cursor ? `${cursor} ${tableName}` : `SELECT * FROM ${tableName}`;
-    handleSqlChange(newSql);
+    // Empty editor → seed a full SELECT; otherwise insert the name at the caret.
+    if (!sqlRef.current.trim()) {
+      handleSqlChange(`SELECT * FROM ${tableName}`);
+      return;
+    }
+    editorRef.current?.insertAtCursor(tableName);
   };
 
   const handleLoadQuery = (loadedSql: string, _conn: string) => {
@@ -156,6 +171,7 @@ export const QueryRunner = () => {
           {/* Main editor + results */}
           <Box style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
             <SqlEditor
+              ref={editorRef}
               sql={sql}
               onChange={handleSqlChange}
               onRun={handleRun}

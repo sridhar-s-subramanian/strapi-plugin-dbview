@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { EditorState, Compartment } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
 import { basicSetup } from 'codemirror';
@@ -17,16 +17,17 @@ interface Props {
   isLoading: boolean;
 }
 
+export interface SqlEditorHandle {
+  /** Insert text at the current caret (replacing any selection) and refocus. */
+  insertAtCursor: (text: string) => void;
+}
+
 const ROW_LIMITS = [25, 50, 100, 500, 1000, 5000];
 
-export const SqlEditor = ({
-  sql: sqlValue,
-  onChange,
-  onRun,
-  onExplain,
-  onExplainAnalyze,
-  isLoading,
-}: Props) => {
+export const SqlEditor = forwardRef<SqlEditorHandle, Props>(function SqlEditor(
+  { sql: sqlValue, onChange, onRun, onExplain, onExplainAnalyze, isLoading },
+  ref
+) {
   const [limit, setLimit] = useState(100);
   const { colors, isDark } = useDbViewTheme();
 
@@ -100,6 +101,26 @@ export const SqlEditor = ({
     });
   }, [isDark]);
 
+  useImperativeHandle(ref, () => ({
+    insertAtCursor: (text: string) => {
+      const view = viewRef.current;
+      if (!view) return;
+
+      const range = view.state.selection.main;
+      const before =
+        range.from > 0 ? view.state.doc.sliceString(range.from - 1, range.from) : '';
+      // Add a separating space only when inserting mid-token; not at the
+      // start of the doc, after whitespace, or right after an opening paren.
+      const insert = (before === '' || /[\s(]/.test(before) ? '' : ' ') + text;
+
+      view.dispatch({
+        changes: { from: range.from, to: range.to, insert },
+        selection: { anchor: range.from + insert.length },
+      });
+      view.focus();
+    },
+  }));
+
   return (
     <Box>
       <Box
@@ -155,4 +176,4 @@ export const SqlEditor = ({
       </Flex>
     </Box>
   );
-};
+});

@@ -127,7 +127,7 @@ After installation and configuration:
 - Use the **EXPLAIN** button to see the query plan without executing it.
 - Use the **EXPLAIN ANALYZE** button to see the plan with actual execution stats (runs and rolls back).
 - Adjust the **row limit** dropdown to control result size (capped at `maxRowLimit`).
-- Click table names in the left sidebar to insert them into the editor.
+- Click a table name in the left sidebar to insert it at the cursor (or to start a `SELECT * FROM …` when the editor is empty).
 - Click the structure icon next to a table to view its columns and indexes inline.
 - Use the **Saved Queries** panel to save frequently-used queries by name and reload them later.
 
@@ -154,9 +154,9 @@ A character-by-character state machine strips all string literals, quoted identi
 [node-sql-parser](https://github.com/taozhi8848/node-sql-parser) parses the SQL and verifies:
 
 - The AST root is a `SELECT` statement
-- Extracts real table names (CTE names are excluded so `WITH cte AS (...) SELECT * FROM cte` works correctly)
+- Extracts real table names (CTE names are excluded so `WITH cte AS (...) SELECT * FROM cte` works correctly), including every branch of a `UNION` and the real tables behind a CTE alias
 
-If parsing fails for all supported dialects, the query is rejected conservatively.
+This layer **fails closed**: if the parser cannot positively confirm the statement is a SELECT — whether because it is a detected non-SELECT or because no supported dialect could parse it — the query is rejected. Allowing an unparseable query through would skip the table-scope check below (which runs on the parsed table list), so a query the parser cannot understand could otherwise reach a deny-listed table.
 
 ### Layer 2 — Table scope
 
@@ -181,10 +181,12 @@ strapi_releases              strapi_release_actions
 Every query is wrapped before execution:
 
 ```sql
-SELECT * FROM (<your query>) AS _dbview_sub LIMIT <N>
+SELECT * FROM (
+<your query>
+) AS _dbview_sub LIMIT <N>
 ```
 
-`N` is an integer constant derived from config, never from user input.
+`N` is an integer constant derived from config, never from user input. The closing paren and `LIMIT` sit on their own lines so a trailing single-line comment (`-- …`) inside the inner query cannot comment out the enforced limit.
 
 ### Layer 4 — Always-rollback transaction
 
@@ -231,6 +233,9 @@ npm install
 npm run test:ts:back
 npm run test:ts:front
 
+# Run the test suite (Vitest)
+npm test
+
 # Build
 npm run build
 
@@ -250,6 +255,18 @@ npm run watch:link
 # In your Strapi app
 npx yalc add @swamp-crocodile/strapi-plugin-dbview
 ```
+
+### Tests
+
+```bash
+npm test          # run once
+npm run test:watch
+```
+
+The suite (Vitest) covers the security-critical server code and runs entirely on in-memory SQLite — no external database required:
+
+- **Lexer** and **AST parser** unit tests — keyword/comment/quote evasion, stacked statements, CTE and `UNION` table extraction, fail-closed behaviour.
+- **Query service** integration tests, including an adversarial suite asserting that only read-only `SELECT` / `WITH…SELECT` statements against allowed tables can run — writes, DDL, CTE-smuggled writes, file/OS functions, deny-list evasion, and parser-defeating reads are all rejected.
 
 ---
 
