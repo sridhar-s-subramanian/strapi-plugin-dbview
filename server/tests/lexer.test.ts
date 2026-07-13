@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { analyze } from '../lexer';
+import { analyze } from '../src/services/security/lexer';
 
 describe('lexer — first keyword', () => {
   it('accepts SELECT', () => {

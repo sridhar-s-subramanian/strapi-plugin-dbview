@@ -11,7 +11,12 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ts:front": "tsc -p admin/tsconfig.json --noEmit",
-    "test:ts:back": "tsc -p server/tsconfig.json --noEmit"
+    "test:ts:back": "tsc -p server/tsconfig.json --noEmit",
+    "test:ts:spec": "tsc -p server/tsconfig.spec.json --noEmit",
+    "prepublishOnly": "npm run test && npm run build && npm run verify"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "exports": {
     "./strapi-admin": {

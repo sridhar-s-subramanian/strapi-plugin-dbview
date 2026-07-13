@@ -1,6 +1,6 @@
 import knexFactory, { type Knex } from 'knex';
 import type { Core } from '@strapi/strapi';
-import createQueryService from '../../query';
+import createQueryService from '../../src/services/query';
 
 export interface HarnessConfig {
   defaultRowLimit: number;

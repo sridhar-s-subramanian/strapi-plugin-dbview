@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseSQL } from '../parser';
+import { parseSQL } from '../src/services/security/parser';
 
 describe('parser — table extraction', () => {
   it('extracts a single table', () => {

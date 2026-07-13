@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import knexFactory, { type Knex } from 'knex';
 import type { Core } from '@strapi/strapi';
-import createQueryService from '../query';
+import createQueryService from '../src/services/query';
 
 /** Config the fake plugin hands back; individual tests can override these. */
 const config: Record<string, unknown> = {
