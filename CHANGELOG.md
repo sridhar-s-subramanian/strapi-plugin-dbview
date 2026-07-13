@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 _Nothing yet._
 
+## [0.1.1] - 2026-07-13
+
+Maintenance release. No changes to runtime behaviour or the published bundle —
+this adds test coverage and release tooling only.
+
+### Added
+
+- Test suite (Vitest, 139 tests) covering the security-critical server code —
+  lexer, AST parser, and an adversarial query-service suite — plus the admin API
+  layer (`useDbViewApi` request contract and request-error handling). Runs on
+  in-memory SQLite with no external database.
+- Automated publishing to npm on release via GitHub Actions using Trusted
+  Publishing (OIDC) with build provenance — no long-lived tokens.
+- Commit-hygiene pre-commit hook that blocks secrets, credential/env files, and
+  build artifacts.
+
+### Changed
+
+- Tests live outside the compiled source tree (`server/tests`, `admin/tests`) so
+  they are never included in the published package.
+
 ## [0.1.0] - 2026-07-13
 
 Initial release: a read-only database browser and SQL query runner for the
@@ -50,5 +71,6 @@ Strapi v5 admin panel.
 - Query executions are audited to the application log (blocked at `warn`,
   successful reads at `debug`) rather than a database table.
 
-[Unreleased]: https://github.com/sridhar-s-subramanian/strapi-plugin-dbview/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/sridhar-s-subramanian/strapi-plugin-dbview/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/sridhar-s-subramanian/strapi-plugin-dbview/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/sridhar-s-subramanian/strapi-plugin-dbview/releases/tag/v0.1.0
