@@ -3,6 +3,7 @@ import { Page, Layouts, useQueryParams } from '@strapi/strapi/admin';
 import { Box, Flex, Typography } from '@strapi/design-system';
 import { useBrowsePermission, useQueryPermission } from '../../hooks/usePermissions';
 import { useDbViewApi } from '../../hooks/useDbViewApi';
+import { getRequestErrorMessage } from '../../utils/errors';
 import { SqlEditor, type SqlEditorHandle } from './SqlEditor';
 import { QueryRunnerSidebar } from './TableSidebar';
 import { ResultsPanel } from './ResultsPanel';
@@ -16,18 +17,6 @@ type ResultState =
   | { kind: 'explain'; type: 'explain' | 'explain-analyze'; columns: string[]; rows: Record<string, unknown>[]; durationMs: number }
   | { kind: 'structure'; table: string; columns: unknown[]; indexes: unknown[] }
   | { kind: 'error'; message: string };
-
-/** Pull a human-readable message out of a thrown request error, whatever its shape. */
-function getRequestErrorMessage(err: unknown): string {
-  const body = (err as { response?: { data?: { error?: unknown } } })?.response?.data?.error;
-  if (typeof body === 'string' && body) return body;
-  if (body && typeof body === 'object' && 'message' in body) {
-    const m = (body as { message?: unknown }).message;
-    if (typeof m === 'string' && m) return m;
-  }
-  if (err instanceof Error && err.message) return err.message;
-  return 'An error occurred while running the query.';
-}
 
 export const QueryRunner = () => {
   const { canBrowse, isLoading: isLoadingBrowse } = useBrowsePermission();

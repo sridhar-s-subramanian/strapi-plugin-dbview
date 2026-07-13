@@ -3,8 +3,7 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     environment: 'node',
-    include: ['server/tests/**/*.test.ts'],
-    // The admin side is React/browser code and is covered by the typecheck only.
+    include: ['server/tests/**/*.test.ts', 'admin/tests/**/*.test.ts'],
     exclude: ['node_modules', 'dist'],
   },
 });

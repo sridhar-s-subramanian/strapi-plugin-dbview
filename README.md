@@ -263,10 +263,13 @@ npm test          # run once
 npm run test:watch
 ```
 
-The suite (Vitest) covers the security-critical server code and runs entirely on in-memory SQLite — no external database required:
+The suite (Vitest) runs entirely on in-memory SQLite with no external database required:
 
 - **Lexer** and **AST parser** unit tests — keyword/comment/quote evasion, stacked statements, CTE and `UNION` table extraction, fail-closed behaviour.
 - **Query service** integration tests, including an adversarial suite asserting that only read-only `SELECT` / `WITH…SELECT` statements against allowed tables can run — writes, DDL, CTE-smuggled writes, file/OS functions, deny-list evasion, and parser-defeating reads are all rejected.
+- **Admin API layer** tests — the `useDbViewApi` request contract (endpoints, encoding, unwrapped request bodies) and request-error message extraction.
+
+Tests live outside the compiled source tree (`server/tests`, `admin/tests`) so they never ship in the published package.
 
 ---
 
