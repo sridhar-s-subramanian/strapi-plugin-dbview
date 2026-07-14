@@ -1,4 +1,5 @@
-import type { DbViewConfig } from '../types';
+import type { DbViewConfig, ReadOnlyConnectionConfig } from '../types';
+import { normalizeReadOnlyConfig } from '../utils/readOnlyConnection';
 
 export const BUILT_IN_DENY_LIST: string[] = [
   'strapi_core_store_settings',
@@ -25,6 +26,12 @@ const defaults: DbViewConfig = {
   queryTimeoutSeconds: 15,
 };
 
+function validateReadOnlyConnection(value: ReadOnlyConnectionConfig | undefined) {
+  if (value === undefined || value === null || value === '') return;
+  // Throws with a clear message if the shape is wrong; connectivity is checked at bootstrap.
+  normalizeReadOnlyConfig(value);
+}
+
 export default {
   default: defaults,
   validator(config: Partial<DbViewConfig>) {
@@ -36,6 +43,13 @@ export default {
     }
     if (config.queryTimeoutSeconds !== undefined && config.queryTimeoutSeconds < 1) {
       throw new Error('strapi-dbview: queryTimeoutSeconds must be >= 1');
+    }
+    if (config.readOnlyConnection !== undefined) {
+      try {
+        validateReadOnlyConnection(config.readOnlyConnection);
+      } catch (err) {
+        throw new Error(err instanceof Error ? err.message : String(err));
+      }
     }
   },
 };

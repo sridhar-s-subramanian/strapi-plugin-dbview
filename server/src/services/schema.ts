@@ -7,6 +7,13 @@ import { matchesAnyPattern } from './redact';
 let tableNameCache: { names: string[]; expiresAt: number } | null = null;
 const CACHE_TTL_MS = 5_000;
 
+function getPluginKnex(strapi: Core.Strapi): Knex {
+  const connection = strapi.plugin('strapi-dbview').service('connection') as {
+    getKnex(): Knex;
+  };
+  return connection.getKnex();
+}
+
 type Dialect = 'pg' | 'mysql' | 'sqlite';
 
 function getDialect(knex: Knex): Dialect {
@@ -68,7 +75,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       return tableNameCache.names;
     }
 
-    const knex = strapi.db.connection as unknown as Knex;
+    const knex = getPluginKnex(strapi);
     const dialect = getDialect(knex);
     const denySet = getDenySet(strapi);
     const raw = await fetchRawTableNames(knex, dialect);
@@ -91,7 +98,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
 
   /** Full column + index introspection for a single table. */
   async getTableStructure(tableName: string): Promise<TableStructure | null> {
-    const knex = strapi.db.connection as unknown as Knex;
+    const knex = getPluginKnex(strapi);
     const dialect = getDialect(knex);
     const redactPatterns = (strapi.plugin('strapi-dbview').config('redactedColumnPatterns') as string[]) ?? [];
 

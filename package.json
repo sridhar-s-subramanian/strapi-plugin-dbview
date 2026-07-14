@@ -1,6 +1,6 @@
 {
   "name": "@swamp-crocodile/strapi-plugin-dbview",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Read-only database browser and SQL query runner for Strapi v5 admin panel",
   "type": "commonjs",
   "scripts": {
@@ -72,6 +72,7 @@
     "@strapi/design-system": "^2.0.0",
     "@strapi/icons": "^2.0.0",
     "@strapi/strapi": "^5.0.0",
+    "knex": ">=2.0.0",
     "react": "^17.0.0 || ^18.0.0",
     "react-dom": "^17.0.0 || ^18.0.0",
     "react-intl": "^6.0.0",

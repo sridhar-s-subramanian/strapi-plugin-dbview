@@ -4,7 +4,7 @@ import type { ExplainResult, QueryResult, RejectedResult, ResultSet } from '../t
 import { analyze } from './security/lexer';
 import { parseSQL } from './security/parser';
 import { BUILT_IN_DENY_LIST } from '../config';
-import { redactRows, matchesAnyPattern } from './redact';
+import { redactRows, matchesAnyPattern, findSensitiveColumnReference } from './redact';
 
 /** Internal sentinel thrown inside transactions to force an unconditional rollback. */
 class RollbackSignal extends Error {
@@ -82,6 +82,22 @@ export default ({ strapi }: { strapi: Core.Strapi }) => {
     };
   }
 
+  function getConnectionService() {
+    return strapi.plugin('strapi-dbview').service('connection') as {
+      getKnex(): Knex;
+      getConnectionLabel(): string;
+    };
+  }
+
+  function getPluginKnex(): Knex {
+    return getConnectionService().getKnex();
+  }
+
+  /** Audit label from plugin config — never from the HTTP client. */
+  function getConnectionLabel(): string {
+    return getConnectionService().getConnectionLabel();
+  }
+
   function getMergedDenySet(userDenyList: string[]): Set<string> {
     return new Set([...BUILT_IN_DENY_LIST, ...userDenyList].map((t) => t.toLowerCase()));
   }
@@ -123,7 +139,8 @@ export default ({ strapi }: { strapi: Core.Strapi }) => {
     userId: number | null,
     connection: string,
     tableNames: string[],
-    denySet: Set<string>
+    denySet: Set<string>,
+    redactedColumnPatterns: string[]
   ): Promise<RejectedResult | null> {
     // ── Layer 1a: Lexical analysis ──────────────────────────────────────────
     const lex = analyze(sql);
@@ -189,26 +206,48 @@ export default ({ strapi }: { strapi: Core.Strapi }) => {
       }
     }
 
+    // ── Layer 2b: Sensitive column references ─────────────────────────────
+    // Result-column redaction alone is not enough: `SELECT password AS pwd`
+    // or expressions like `password || ''` rename the output and bypass
+    // name-based masking. The AST column list names source columns (including
+    // those inside aliases, functions, WHERE, JOIN, CTEs, and subqueries).
+    // Naming a redacted column anywhere in the statement is rejected.
+    // `SELECT *` does not list concrete columns here — those values are still
+    // masked by result redaction after execution.
+    const sensitiveCol = findSensitiveColumnReference(parsed.columns, redactedColumnPatterns);
+    if (sensitiveCol) {
+      const reason =
+        `The column "${sensitiveCol}" is sensitive and cannot be referenced in Query Runner SQL. ` +
+        'Use SELECT * (values are redacted in results) or the Database Browser.';
+      await audit({ userId, sql, connection, allowed: false, reason });
+      return { rejected: true, reason };
+    }
+
     return null; // All checks passed
   }
 
   return {
     /**
-     * Execute a user-supplied SELECT. Applies all 5 security layers:
+     * Execute a user-supplied SELECT. Applies the security stack:
      * 1. Lexical allowlist (custom lexer)
      * 2. AST verification (node-sql-parser)
      * 3. Table scope enforcement
-     * 4. Enforced LIMIT wrap
-     * 5. Always-rollback transaction
+     * 4. Sensitive column reference blocking (AST column list + redaction patterns)
+     * 5. Enforced LIMIT wrap
+     * 6. Always-rollback transaction
+     * 7. Optional read-only Knex pool (Layer 5 — plugin config only)
+     * Plus result-column redaction for SELECT * / remaining sensitive output names.
      */
     async executeQuery(
       sql: string,
       limit: number,
       userId: number | null,
-      connection = 'default'
+      /** @deprecated Ignored — pool comes from plugin config only. Kept for API compatibility. */
+      _connectionIgnored?: string
     ): Promise<QueryResult | RejectedResult> {
       const cfg = getConfig();
-      const knex = strapi.db.connection as unknown as Knex;
+      const knex = getPluginKnex();
+      const connection = getConnectionLabel();
       const dialect = getDialect(knex);
       const denySet = getMergedDenySet(cfg.denyList);
 
@@ -218,7 +257,14 @@ export default ({ strapi }: { strapi: Core.Strapi }) => {
       };
       const tableNames = await schemaService.listTableNames();
 
-      const rejection = await runSecurityChecks(sql, userId, connection, tableNames, denySet);
+      const rejection = await runSecurityChecks(
+        sql,
+        userId,
+        connection,
+        tableNames,
+        denySet,
+        cfg.redactedColumnPatterns
+      );
       if (rejection) return rejection;
 
       // ── Layer 3: Enforced LIMIT wrap ──────────────────────────────────────
@@ -227,7 +273,8 @@ export default ({ strapi }: { strapi: Core.Strapi }) => {
       );
       const wrappedSql = wrapWithLimit(sql, effectiveLimit);
 
-      // ── Layers 4 + 5: Rollback transaction (+ optional timeout) ──────────
+      // ── Layer 4: Always-rollback transaction (+ optional timeout) ─────────
+      // Layer 5 is the Knex pool selected above (read-only when configured).
       let rows: Record<string, unknown>[] = [];
       let durationMs = 0;
 
@@ -273,10 +320,12 @@ export default ({ strapi }: { strapi: Core.Strapi }) => {
       sql: string,
       type: 'explain' | 'explain-analyze',
       userId: number | null,
-      connection = 'default'
+      /** @deprecated Ignored — pool comes from plugin config only. Kept for API compatibility. */
+      _connectionIgnored?: string
     ): Promise<ExplainResult | RejectedResult> {
       const cfg = getConfig();
-      const knex = strapi.db.connection as unknown as Knex;
+      const knex = getPluginKnex();
+      const connection = getConnectionLabel();
       const dialect = getDialect(knex);
       const denySet = getMergedDenySet(cfg.denyList);
 
@@ -285,7 +334,14 @@ export default ({ strapi }: { strapi: Core.Strapi }) => {
       };
       const tableNames = await schemaService.listTableNames();
 
-      const rejection = await runSecurityChecks(sql, userId, connection, tableNames, denySet);
+      const rejection = await runSecurityChecks(
+        sql,
+        userId,
+        connection,
+        tableNames,
+        denySet,
+        cfg.redactedColumnPatterns
+      );
       if (rejection) return rejection;
 
       // Wrap with LIMIT so EXPLAIN ANALYZE doesn't scan full tables

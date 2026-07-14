@@ -14,6 +14,13 @@ function isAllowedOp(op: string): op is FilterOp {
   return ALLOWED_OPS.has(op as FilterOp);
 }
 
+function getPluginKnex(strapi: Core.Strapi): Knex {
+  const connection = strapi.plugin('strapi-dbview').service('connection') as {
+    getKnex(): Knex;
+  };
+  return connection.getKnex();
+}
+
 export default ({ strapi }: { strapi: Core.Strapi }) => ({
   /**
    * Paginated, filtered, sorted browse of a single database table.
@@ -24,7 +31,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
    * user input here.
    */
   async browseTable(tableName: string, options: BrowseOptions, userId: number | null): Promise<BrowseResult | null> {
-    const knex = strapi.db.connection as unknown as Knex;
+    const knex = getPluginKnex(strapi);
     const plugin = strapi.plugin('strapi-dbview');
     const redactPatterns = plugin.config<string[]>('redactedColumnPatterns') ?? [];
     const defaultLimit = plugin.config<number>('defaultRowLimit') ?? 100;
@@ -128,7 +135,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     foreignColumn: string,
     value: unknown
   ): Promise<Record<string, unknown>[]> {
-    const knex = strapi.db.connection as unknown as Knex;
+    const knex = getPluginKnex(strapi);
     const plugin = strapi.plugin('strapi-dbview');
     const redactPatterns = plugin.config<string[]>('redactedColumnPatterns') ?? [];
     const limit = Math.min(plugin.config<number>('defaultRowLimit') ?? 100, 100);

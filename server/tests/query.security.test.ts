@@ -170,3 +170,29 @@ describe('wrapper robustness', () => {
     expect(rejected(r)).toBe(false);
   });
 });
+
+describe('sensitive column references cannot bypass redaction', () => {
+  it.each([
+    ['alias', 'SELECT password AS pwd FROM users'],
+    ['expression', "SELECT password || '' AS x FROM users"],
+    ['function', 'SELECT substr(password, 1, 3) FROM users'],
+    ['WHERE', 'SELECT id FROM users WHERE api_token = \'tok0\''],
+    ['CTE', 'WITH x AS (SELECT password AS p FROM users) SELECT p FROM x'],
+    ['subquery', 'SELECT p FROM (SELECT password AS p FROM users) s'],
+  ])('rejects %s exfiltration', async (_label, sql) => {
+    const r = await run(sql);
+    expect(rejected(r)).toBe(true);
+    if (rejected(r)) expect(r.reason).toMatch(/sensitive/i);
+    expect(JSON.stringify(r)).not.toMatch(/secret\d/);
+    expect(JSON.stringify(r)).not.toMatch(/tok\d/);
+  });
+
+  it('SELECT * still returns rows with sensitive values masked', async () => {
+    const r = await run('SELECT * FROM users', 1);
+    expect(rejected(r)).toBe(false);
+    if (rejected(r)) return;
+    expect(r.data.rows[0].password).toBe('[REDACTED]');
+    expect(r.data.rows[0].api_token).toBe('[REDACTED]');
+    expect(r.data.rows[0].name).toBe('user0');
+  });
+});

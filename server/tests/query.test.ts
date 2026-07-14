@@ -25,14 +25,25 @@ function fakeStrapi(): Core.Strapi {
     log: { debug() {}, warn() {}, info() {}, error() {} },
     plugin: () => ({
       config: (key: string) => config[key],
-      service: () => ({
-        listTableNames: async () => {
-          const rows = await db.raw(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
-          );
-          return (rows as Array<{ name: string }>).map((r) => r.name);
-        },
-      }),
+      service: (name: string) => {
+        if (name === 'connection') {
+          return {
+            getKnex: () => db,
+            getConnectionLabel: () => 'default',
+            isUsingReadOnly: () => false,
+            init: async () => {},
+            destroy: async () => {},
+          };
+        }
+        return {
+          listTableNames: async () => {
+            const rows = await db.raw(
+              "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+            );
+            return (rows as Array<{ name: string }>).map((r) => r.name);
+          },
+        };
+      },
     }),
   } as unknown as Core.Strapi;
 }
@@ -171,7 +182,7 @@ describe('executeQuery — enforced LIMIT (layer 3)', () => {
 });
 
 describe('executeQuery — redaction', () => {
-  it('masks columns matching the redaction patterns', async () => {
+  it('masks columns matching the redaction patterns on SELECT *', async () => {
     const r = await service.executeQuery('SELECT * FROM users', 1, 1);
     if (rejected(r)) throw new Error('unexpectedly rejected');
 
@@ -181,10 +192,50 @@ describe('executeQuery — redaction', () => {
     expect(row.name).toBe('user0'); // untouched
   });
 
+  it('still allows selecting non-sensitive columns by name', async () => {
+    const r = await service.executeQuery('SELECT id, name FROM users', 1, 1);
+    if (rejected(r)) throw new Error('unexpectedly rejected');
+    expect(r.data.rows[0].name).toBe('user0');
+    expect(r.data.rows[0]).not.toHaveProperty('password');
+  });
+
   it('reports which columns are redacted', () => {
     expect(service.isRedacted('password')).toBe(true);
     expect(service.isRedacted('reset_token')).toBe(true);
     expect(service.isRedacted('name')).toBe(false);
+  });
+});
+
+describe('executeQuery — sensitive column reference blocking', () => {
+  it.each([
+    ['direct select', 'SELECT password FROM users'],
+    ['alias rename', 'SELECT password AS pwd FROM users'],
+    ['expression', "SELECT password || '' AS x FROM users"],
+    ['function wrap', 'SELECT lower(password) FROM users'],
+    ['qualified name', 'SELECT users.password FROM users'],
+    ['quoted identifier', 'SELECT "password" FROM users'],
+    ['WHERE clause', 'SELECT name FROM users WHERE password IS NOT NULL'],
+    ['CTE smuggle', 'WITH t AS (SELECT password AS pwd FROM users) SELECT pwd FROM t'],
+    ['subquery smuggle', 'SELECT * FROM (SELECT password AS pwd FROM users) t'],
+    ['glob pattern column', 'SELECT api_token FROM users'],
+  ])('rejects sensitive column via %s', async (_label, sql) => {
+    const r = await service.executeQuery(sql, 100, 1);
+    expect(rejected(r)).toBe(true);
+    if (rejected(r)) {
+      expect(r.reason).toMatch(/sensitive/i);
+    }
+  });
+
+  it('does not leak secret values when an alias bypass is attempted', async () => {
+    const r = await service.executeQuery('SELECT password AS pwd FROM users', 5, 1);
+    expect(rejected(r)).toBe(true);
+    // Must not be a successful result set with the secret under another key
+    expect(JSON.stringify(r)).not.toMatch(/secret0/);
+  });
+
+  it('applies the same block on EXPLAIN', async () => {
+    const r = await service.explainQuery('SELECT password AS pwd FROM users', 'explain', 1);
+    expect(rejected(r)).toBe(true);
   });
 });
 

@@ -18,10 +18,11 @@ Inspired by [filament-dbview](https://github.com/sridhar-s-subramanian/filament-
 
 - **Database Browser** — Browse every table in your database with pagination, sorting, column filtering, row detail view, and FK preview. Export data as CSV or JSON.
 - **Query Runner** — Write and run `SELECT` queries with a CodeMirror SQL editor. Supports `EXPLAIN` and `EXPLAIN ANALYZE`. Save queries for later.
-- **Strictly read-only** — Five independent security layers enforce read-only access. No `INSERT`, `UPDATE`, `DELETE`, or DDL can ever execute, regardless of how the SQL is crafted.
+- **Strictly read-only** — Multiple independent security layers enforce read-only access. No `INSERT`, `UPDATE`, `DELETE`, or DDL can ever execute, regardless of how the SQL is crafted.
 - **Strapi RBAC** — Uses Strapi's built-in admin permission system. Access is scoped per role with three granular permissions.
-- **Sensitive column redaction** — Columns matching patterns like `password`, `*_token`, `*_secret` are automatically replaced with `[REDACTED]` before any data leaves the server.
+- **Sensitive column protection** — Columns matching patterns like `password`, `*_token`, `*_secret` cannot be named in Query Runner SQL (including under aliases, expressions, or WHERE/JOIN clauses). `SELECT *` still works; matching values are replaced with `[REDACTED]` in the result set.
 - **Multi-database** — Supports PostgreSQL, MySQL/MySQL2, and SQLite3.
+- **Optional read-only DB connection (Layer 5)** — Point the plugin at a SELECT-only database user you create. All browse/query/schema traffic uses that pool; the admin UI cannot pick a different connection.
 
 ---
 
@@ -59,7 +60,7 @@ Register the plugin in your Strapi app's `config/plugins.ts` (or `.js`):
 
 ```ts
 // config/plugins.ts
-export default {
+export default ({ env }) => ({
   'strapi-dbview': {
     enabled: true,
     config: {
@@ -79,10 +80,30 @@ export default {
         'reset_password_token',
         'confirm_token',
       ],
-      // readOnlyConnection: 'readonly', // optional: named Knex connection with SELECT-only DB user
+
+      // Optional Layer 5 — dedicated SELECT-only DB user (you create the role + grants).
+      // When set, ALL plugin reads (browser, query runner, schema) use this pool.
+      // When omitted, the plugin uses Strapi's default database connection.
+      //
+      // URL form (Postgres / MySQL):
+      // readOnlyConnection: env('DBVIEW_DATABASE_URL'),
+      //
+      // Or full Knex config:
+      // readOnlyConnection: {
+      //   client: 'postgres', // or 'pg', 'mysql2', 'better-sqlite3', …
+      //   connection: {
+      //     host: env('DBVIEW_HOST', env('DATABASE_HOST', 'localhost')),
+      //     port: env.int('DBVIEW_PORT', env.int('DATABASE_PORT', 5432)),
+      //     database: env('DBVIEW_NAME', env('DATABASE_NAME')),
+      //     user: env('DBVIEW_USER', 'dbview_ro'),
+      //     password: env('DBVIEW_PASSWORD'),
+      //     ssl: env.bool('DATABASE_SSL', false) && { rejectUnauthorized: false },
+      //   },
+      //   pool: { min: 0, max: 5 },
+      // },
     },
   },
-};
+});
 ```
 
 ### Configuration reference
@@ -93,8 +114,50 @@ export default {
 | `maxRowLimit` | `number` | `5000` | Hard cap on rows. Requests above this are clamped, not rejected |
 | `queryTimeoutSeconds` | `number` | `15` | Statement-level timeout applied inside the query transaction |
 | `denyList` | `string[]` | `[]` | Additional table names to block. Merged with the built-in deny list |
-| `redactedColumnPatterns` | `string[]` | see above | Glob patterns matched against column names. Matching columns show `[REDACTED]` |
-| `readOnlyConnection` | `string` | — | Name of an alternative Knex connection configured in `config/database.ts`. Use this to point the plugin at a DB user with only `SELECT` privilege (Layer 5 security) |
+| `redactedColumnPatterns` | `string[]` | see above | Glob patterns for sensitive columns. Query Runner **rejects** SQL that references matching column names; result sets still mask matching output keys as `[REDACTED]` |
+| `readOnlyConnection` | `string` \| `Knex.Config` | — | Optional dedicated connection for all plugin DB reads (Layer 5). See below. |
+
+### Optional read-only connection (`readOnlyConnection`)
+
+This is **opt-in defence-in-depth**. The plugin cannot create a database user for you — your ops/DBA must create a role with only the privileges you want (typically `SELECT`), then point the plugin at it.
+
+**Supported forms:**
+
+| Form | Example |
+|---|---|
+| Postgres URL | `postgres://dbview_ro:secret@localhost:5432/myapp` |
+| MySQL URL | `mysql://dbview_ro:secret@localhost:3306/myapp` |
+| Knex config object | `{ client: 'pg', connection: { host, user, password, database }, pool? }` |
+
+**Behaviour:**
+
+- **Unset** — plugin uses Strapi’s default `strapi.db.connection` (same as your app).
+- **Set** — plugin opens a **separate Knex pool** at bootstrap, runs `SELECT 1` as a health check, and uses that pool for schema listing, Database Browser, FK preview, Query Runner, and EXPLAIN.
+- **Fail closed** — if the config is invalid or the database is unreachable, **Strapi will not start**. Fix the credentials or remove `readOnlyConnection` to fall back to the default connection. The plugin never silently ignores a broken RO config and falls back to the full-privilege app user.
+- **Client cannot choose a pool** — request body / saved-query `connection` fields are labels only; they do not switch databases.
+
+**Example: PostgreSQL SELECT-only role**
+
+```sql
+-- Run as a superuser / owner against your app database
+CREATE ROLE dbview_ro LOGIN PASSWORD 'choose-a-strong-password';
+GRANT CONNECT ON DATABASE your_database TO dbview_ro;
+GRANT USAGE ON SCHEMA public TO dbview_ro;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO dbview_ro;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT SELECT ON TABLES TO dbview_ro;
+
+-- Optional: revoke tables you never want visible even via SELECT *
+-- REVOKE SELECT ON TABLE admin_users FROM dbview_ro;
+```
+
+```ts
+// config/plugins.ts
+readOnlyConnection: env('DBVIEW_DATABASE_URL'),
+// e.g. DBVIEW_DATABASE_URL=postgres://dbview_ro:...@db-host:5432/your_database
+```
+
+> **Production recommendation:** use `readOnlyConnection` with a true SELECT-only role. Application-layer checks (lexer, AST, deny list, redaction, rollback) still apply on top.
 
 ---
 
@@ -145,7 +208,7 @@ After installation and configuration:
 
 ## Security model
 
-All SQL execution passes through five independent layers. Every layer must pass before a query touches the database. Bypassing one layer does not bypass the others.
+All SQL execution passes through independent security layers. Every layer must pass before a query touches the database. Bypassing one layer does not bypass the others.
 
 ### Layer 1a — Lexer
 
@@ -163,6 +226,7 @@ A character-by-character state machine strips all string literals, quoted identi
 
 - The AST root is a `SELECT` statement
 - Extracts real table names (CTE names are excluded so `WITH cte AS (...) SELECT * FROM cte` works correctly), including every branch of a `UNION` and the real tables behind a CTE alias
+- Extracts **source column identifiers** used anywhere in the statement (SELECT list, expressions, `WHERE`, `JOIN`, CTEs, subqueries), including quoted identifiers. Aliases are not treated as source columns — `SELECT password AS pwd` still reports `password`.
 
 This layer **fails closed**: if the parser cannot positively confirm the statement is a SELECT — whether because it is a detected non-SELECT or because no supported dialect could parse it — the query is rejected. Allowing an unparseable query through would skip the table-scope check below (which runs on the parsed table list), so a query the parser cannot understand could otherwise reach a deny-listed table.
 
@@ -183,6 +247,18 @@ strapi_transfer_tokens       strapi_transfer_token_permissions
 strapi_webhooks              strapi_history_versions
 strapi_releases              strapi_release_actions
 ```
+
+### Layer 2b — Sensitive column references
+
+Result-column redaction alone is not enough: renaming a secret in the SELECT list (for example `SELECT password AS pwd` or `SELECT password || '' AS x`) would otherwise return the cleartext under a non-matching key.
+
+After the AST is verified, every **source** column identifier from the parse is checked against `redactedColumnPatterns`. If any match, the query is **rejected** before execution — including when the name appears only inside a CTE, subquery, function call, or `WHERE`/`JOIN` clause.
+
+`SELECT *` (and `table.*`) does not expand to concrete column names in the AST list, so those queries are allowed; sensitive values are still replaced with `[REDACTED]` in the result set (see below).
+
+**Result redaction** (always applied after a successful execute): any result key whose name matches a redaction pattern is replaced with `[REDACTED]`. This covers `SELECT *` and any residual name-based leakage.
+
+> Prefer the **Database Browser** when you need a filtered view of tables that contain sensitive columns — it never accepts raw column expressions and redacts on the real schema names.
 
 ### Layer 3 — Enforced LIMIT
 
@@ -211,7 +287,13 @@ Nothing a query does can ever persist, even if all other layers were somehow byp
 
 ### Layer 5 — Optional read-only connection
 
-Configure `readOnlyConnection` to point the plugin at a database user with only `SELECT` privilege. This is a defence-in-depth measure at the database level independent of application logic.
+When `readOnlyConnection` is configured, every plugin read uses a **dedicated Knex pool** aimed at a DB user you provision with only `SELECT` (or tighter) grants. This is enforced at the database engine, independent of application logic.
+
+- Initialized at plugin bootstrap with a connectivity check (`SELECT 1`).
+- Misconfiguration or an unreachable RO database **aborts Strapi startup** (fail closed).
+- Unset → default Strapi connection (Layers 1–4 still apply).
+
+See [Optional read-only connection](#optional-read-only-connection-readonlyconnection) for config shapes and grant examples.
 
 ---
 
@@ -220,7 +302,8 @@ Configure `readOnlyConnection` to point the plugin at a database user with only 
 | | Database Browser | Query Runner |
 |---|---|---|
 | Access | Point-and-click | Raw SQL |
-| SQL injection risk | None (Knex query builder, no raw SQL) | Mitigated by 5-layer security model |
+| SQL injection risk | None (Knex query builder, no raw SQL) | Mitigated by multi-layer security model |
+| Sensitive columns | Redacted in results; cannot filter/sort on them | Cannot be named in SQL; `SELECT *` redacts in results |
 | Supported operations | Paginated read with sort/filter | SELECT, EXPLAIN, EXPLAIN ANALYZE |
 | Export | CSV, JSON | CSV, JSON |
 | Requires permission | `browse` | `query` |
@@ -273,8 +356,9 @@ npm run test:watch
 
 The suite (Vitest) runs entirely on in-memory SQLite with no external database required:
 
-- **Lexer** and **AST parser** unit tests — keyword/comment/quote evasion, stacked statements, CTE and `UNION` table extraction, fail-closed behaviour.
-- **Query service** integration tests, including an adversarial suite asserting that only read-only `SELECT` / `WITH…SELECT` statements against allowed tables can run — writes, DDL, CTE-smuggled writes, file/OS functions, deny-list evasion, and parser-defeating reads are all rejected.
+- **Lexer** and **AST parser** unit tests — keyword/comment/quote evasion, stacked statements, CTE and `UNION` table extraction, column extraction (aliases/expressions), fail-closed behaviour.
+- **Query service** integration tests, including an adversarial suite asserting that only read-only `SELECT` / `WITH…SELECT` statements against allowed tables can run — writes, DDL, CTE-smuggled writes, file/OS functions, deny-list evasion, parser-defeating reads, and **sensitive-column alias/expression exfiltration** are all rejected.
+- **Redaction** unit tests — glob matching and sensitive-column reference detection.
 - **Admin API layer** tests — the `useDbViewApi` request contract (endpoints, encoding, unwrapped request bodies) and request-error message extraction.
 
 Tests live outside the compiled source tree (`server/tests`, `admin/tests`) so they never ship in the published package.

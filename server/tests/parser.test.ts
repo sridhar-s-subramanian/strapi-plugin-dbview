@@ -72,10 +72,42 @@ describe('parser — statement type', () => {
   });
 });
 
+describe('parser — column extraction', () => {
+  it('extracts concrete source columns (not aliases)', () => {
+    const { columns } = parseSQL('SELECT password AS pwd FROM users');
+    expect(columns).toContain('password');
+    expect(columns).not.toContain('pwd');
+  });
+
+  it('extracts columns inside expressions and WHERE', () => {
+    const { columns } = parseSQL("SELECT lower(password) FROM users WHERE api_token IS NOT NULL");
+    expect(columns).toEqual(expect.arrayContaining(['password', 'api_token']));
+  });
+
+  it('extracts columns from CTEs and subqueries', () => {
+    const cte = parseSQL('WITH t AS (SELECT password AS pwd FROM users) SELECT pwd FROM t');
+    expect(cte.columns).toContain('password');
+
+    const sub = parseSQL('SELECT * FROM (SELECT password AS pwd FROM users) t');
+    expect(sub.columns).toContain('password');
+  });
+
+  it('does not treat SELECT * as a concrete column list', () => {
+    const { columns } = parseSQL('SELECT * FROM users');
+    expect(columns).not.toContain('*');
+    expect(columns).not.toContain('(.*)');
+  });
+
+  it('strips quoting from column identifiers', () => {
+    expect(parseSQL('SELECT "password" FROM users').columns).toContain('password');
+  });
+});
+
 describe('parser — unparseable input fails closed', () => {
   it('returns isSelectOnly=false when no dialect can parse it', () => {
     const r = parseSQL('%%% not sql at all %%%');
     expect(r.isSelectOnly).toBe(false);
     expect(r.tables).toEqual([]);
+    expect(r.columns).toEqual([]);
   });
 });

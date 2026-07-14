@@ -33,13 +33,33 @@ function extractCteNames(ast: AstNode | AstNode[]): string[] {
 }
 
 /**
+ * node-sql-parser columnList entries look like `select::table::column` or
+ * `select::null::column`. Star projections use `(.*)`. We only care about
+ * concrete source column identifiers (aliases of non-sensitive sources are
+ * not listed — only the underlying column is).
+ */
+function extractColumnNames(rawColumnList: string[]): string[] {
+  const columns: string[] = [];
+
+  for (const entry of rawColumnList) {
+    const parts = entry.split('::');
+    const raw = (parts[parts.length - 1] ?? '').toLowerCase().replace(/^[`"']+|[`"']+$/g, '');
+    // Skip star expansions and empty fragments
+    if (!raw || raw === '(.*)' || raw === '*' || raw === 'null') continue;
+    columns.push(raw);
+  }
+
+  return [...new Set(columns)];
+}
+
+/**
  * Use node-sql-parser as a second opinion after the lexer passes. This
- * provides reliable AST-based table extraction (correctly handles CTEs,
- * subqueries, and qualified table names). Tries multiple SQL dialects to
- * maximise compatibility.
+ * provides reliable AST-based table and column extraction (correctly handles
+ * CTEs, subqueries, qualified names, and quoted identifiers). Tries multiple
+ * SQL dialects to maximise compatibility.
  *
  * On parse failure for all dialects, returns a conservative result with
- * empty tables and isSelectOnly=false — the caller must decide how to
+ * empty tables/columns and isSelectOnly=false — the caller must decide how to
  * handle the ambiguity.
  */
 export function parseSQL(sql: string): ParseResult {
@@ -52,6 +72,7 @@ export function parseSQL(sql: string): ParseResult {
     try {
       const opt = { database: dialect };
       const rawTableList: string[] = parser.tableList(sql, opt);
+      const rawColumnList: string[] = parser.columnList(sql, opt);
       const ast = parser.astify(sql, opt) as unknown as AstNode | AstNode[];
 
       const stmts = Array.isArray(ast) ? ast : [ast];
@@ -69,6 +90,7 @@ export function parseSQL(sql: string): ParseResult {
 
       return {
         tables: [...new Set(tables)],
+        columns: extractColumnNames(rawColumnList),
         cteNames,
         isSelectOnly,
       };
@@ -78,5 +100,5 @@ export function parseSQL(sql: string): ParseResult {
   }
 
   // All dialects failed — return a conservative result
-  return { tables: [], cteNames: [], isSelectOnly: false };
+  return { tables: [], columns: [], cteNames: [], isSelectOnly: false };
 }

@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 _Nothing yet._
 
+## [0.1.5] - 2026-07-14
+
+### Security
+
+- **Query Runner** no longer allows sensitive columns (matching
+  `redactedColumnPatterns`) to be referenced by name in SQL. Aliases,
+  expressions, function wrappers, `WHERE` / `JOIN` clauses, CTEs, and
+  subqueries that name those columns are rejected before execution. This
+  closes a bypass where `SELECT password AS pwd` (or similar) returned
+  cleartext under a non-matching result key. `SELECT *` remains allowed;
+  matching result keys are still masked as `[REDACTED]`.
+- **Layer 5 implemented:** optional `readOnlyConnection` (Postgres/MySQL URL
+  or full Knex config) opens a dedicated pool used for all plugin reads
+  (schema, browser, query, explain). Invalid or unreachable RO config fails
+  closed at bootstrap instead of falling back to the app connection. The HTTP
+  client cannot select a pool. Operators must still create the SELECT-only DB
+  user and grants themselves.
+
+### Added
+
+- Connection service with init/destroy lifecycle and audit labels
+  `default` / `read-only`.
+- AST-based source column extraction in the SQL parser (used by sensitive-
+  column blocking).
+- Tests for sensitive-column blocking, redaction helpers, and read-only
+  connection lifecycle.
+- Docs: grant examples and configuration forms for `readOnlyConnection`.
+
 ## [0.1.4] - 2026-07-14
 
 ### Fixed
@@ -122,7 +150,8 @@ Strapi v5 admin panel.
 - Query executions are audited to the application log (blocked at `warn`,
   successful reads at `debug`) rather than a database table.
 
-[Unreleased]: https://github.com/sridhar-s-subramanian/strapi-plugin-dbview/compare/v0.1.4...HEAD
+[Unreleased]: https://github.com/sridhar-s-subramanian/strapi-plugin-dbview/compare/v0.1.5...HEAD
+[0.1.5]: https://github.com/sridhar-s-subramanian/strapi-plugin-dbview/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/sridhar-s-subramanian/strapi-plugin-dbview/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/sridhar-s-subramanian/strapi-plugin-dbview/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/sridhar-s-subramanian/strapi-plugin-dbview/compare/v0.1.1...v0.1.2

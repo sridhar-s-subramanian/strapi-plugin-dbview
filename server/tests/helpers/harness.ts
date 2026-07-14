@@ -69,14 +69,25 @@ export async function createHarness(overrides: Partial<HarnessConfig> = {}): Pro
     log: { debug() {}, warn() {}, info() {}, error() {} },
     plugin: () => ({
       config: (key: string) => (config as unknown as Record<string, unknown>)[key],
-      service: () => ({
-        listTableNames: async () => {
-          const rows = await db.raw(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
-          );
-          return (rows as Array<{ name: string }>).map((r) => r.name);
-        },
-      }),
+      service: (name: string) => {
+        if (name === 'connection') {
+          return {
+            getKnex: () => db,
+            getConnectionLabel: () => 'default',
+            isUsingReadOnly: () => false,
+            init: async () => {},
+            destroy: async () => {},
+          };
+        }
+        return {
+          listTableNames: async () => {
+            const rows = await db.raw(
+              "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+            );
+            return (rows as Array<{ name: string }>).map((r) => r.name);
+          },
+        };
+      },
     }),
   } as unknown as Core.Strapi;
 
