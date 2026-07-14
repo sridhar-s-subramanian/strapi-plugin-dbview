@@ -214,7 +214,7 @@ export const DataGrid = ({ tableName }: Props) => {
                         position: 'relative',
                       }}
                     >
-                      <Flex alignItems="center" gap={1}>
+                      <Flex alignItems="center" justifyContent="space-between" gap={1} style={{ width: '100%' }}>
                         {info?.isSensitive ? (
                           <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{col}</span>
                         ) : (
@@ -237,34 +237,36 @@ export const DataGrid = ({ tableName }: Props) => {
                             </Flex>
                           </Flex>
                         )}
-                        {info && !info.isSensitive && (
-                          <Popover.Root
-                            open={openFilter === col}
-                            onOpenChange={(open) => setOpenFilter(open ? col : null)}
-                          >
-                            <Popover.Trigger>
-                              <IconButton
-                                size="S"
-                                label={isFiltered ? `Edit filter on ${col}` : `Filter ${col}`}
-                                style={{ color: isFiltered ? colors.primary600 : undefined }}
-                              ><Filter /></IconButton>
-                            </Popover.Trigger>
-                            <Popover.Content>
-                              <ColumnFilter
-                                column={col}
-                                type={info.normalizedType as 'text'}
-                                current={filters[col]}
-                                onApply={handleApplyFilter}
-                                onClear={handleClearFilter}
-                              />
-                            </Popover.Content>
-                          </Popover.Root>
-                        )}
-                        {info?.foreignKeyTable && (
-                          <Tooltip description={`→ ${info.foreignKeyTable}`}>
-                            <span style={{ fontSize: 11, color: colors.primary600, cursor: 'default' }}>FK</span>
-                          </Tooltip>
-                        )}
+                        <Flex alignItems="center" gap={1}>
+                          {info && !info.isSensitive && (
+                            <Popover.Root
+                              open={openFilter === col}
+                              onOpenChange={(open) => setOpenFilter(open ? col : null)}
+                            >
+                              <Popover.Trigger>
+                                <IconButton
+                                  size="S"
+                                  variant={isFiltered ? 'default' : 'ghost'}
+                                  label={isFiltered ? `Edit filter on ${col}` : `Filter ${col}`}
+                                ><Filter /></IconButton>
+                              </Popover.Trigger>
+                              <Popover.Content>
+                                <ColumnFilter
+                                  column={col}
+                                  type={info.normalizedType as 'text'}
+                                  current={filters[col]}
+                                  onApply={handleApplyFilter}
+                                  onClear={handleClearFilter}
+                                />
+                              </Popover.Content>
+                            </Popover.Root>
+                          )}
+                          {info?.foreignKeyTable && (
+                            <Tooltip description={`→ ${info.foreignKeyTable}`}>
+                              <span style={{ fontSize: 11, color: colors.primary600, cursor: 'default' }}>FK</span>
+                            </Tooltip>
+                          )}
+                        </Flex>
                       </Flex>
                     </th>
                   );
